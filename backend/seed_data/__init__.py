@@ -1,0 +1,1 @@
+from seed_data.seed_schools import seed_database
