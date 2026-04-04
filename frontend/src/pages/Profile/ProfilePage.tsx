@@ -22,6 +22,23 @@ const DEGREE_TYPES = [
   { value: 'bachelor', label: '本科' },
 ]
 
+const COUNTRIES = ['英国', '美国', '澳大利亚']
+
+const MAJORS_LIST = [
+  '计算机科学', '软件工程', '人工智能', '数据科学', '网络安全',
+  '电子工程', '机械工程', '土木工程', '生物工程', '化学工程',
+  '工商管理', '金融学', '会计学', '市场营销', '国际商务',
+  '经济学', '统计学', '供应链管理', '人力资源管理', '创业管理',
+  '数学', '物理学', '化学', '生物学', '环境科学',
+  '地质学', '天文学', '海洋科学',
+  '心理学', '社会学', '政治学', '国际关系', '传媒学',
+  '新闻学', '教育学', '社会工作',
+  '英语文学', '历史学', '哲学', '艺术史', '音乐',
+  '电影研究', '语言学',
+  '临床医学', '公共卫生', '护理学', '药学', '生物医学',
+  '营养学', '运动科学',
+]
+
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<Tab>('基础信息')
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -174,22 +191,65 @@ export default function ProfilePage() {
         )}
 
         {activeTab === '目标' && (
-          <div className="space-y-4">
-            <Field label="目标国家 (逗号分隔)">
-              <input
-                className={inputCls}
-                value={(form.target_countries || []).join('、')}
-                onChange={e => setForm(f => ({ ...f, target_countries: e.target.value.split(/[,，、]/).map(s => s.trim()).filter(Boolean) }))}
-                placeholder="如：英国、美国、澳大利亚"
-              />
+          <div className="space-y-5">
+            <Field label="目标国家">
+              <div className="flex gap-3 mt-1">
+                {COUNTRIES.map(c => {
+                  const selected = (form.target_countries || []).includes(c)
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        const cur = form.target_countries || []
+                        setForm(f => ({
+                          ...f,
+                          target_countries: selected ? cur.filter(x => x !== c) : [...cur, c]
+                        }))
+                      }}
+                      className={`px-4 py-1.5 rounded-full text-sm border transition-colors ${
+                        selected
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 text-gray-600 hover:border-blue-400'
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  )
+                })}
+              </div>
             </Field>
-            <Field label="目标专业 (逗号分隔)">
-              <input
-                className={inputCls}
-                value={(form.target_majors || []).join('、')}
-                onChange={e => setForm(f => ({ ...f, target_majors: e.target.value.split(/[,，、]/).map(s => s.trim()).filter(Boolean) }))}
-                placeholder="如：计算机科学、人工智能"
-              />
+            <Field label="目标专业（可多选）">
+              <div className="flex flex-wrap gap-2 mt-1">
+                {MAJORS_LIST.map(m => {
+                  const selected = (form.target_majors || []).includes(m)
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => {
+                        const cur = form.target_majors || []
+                        setForm(f => ({
+                          ...f,
+                          target_majors: selected ? cur.filter(x => x !== m) : [...cur, m]
+                        }))
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+                        selected
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 text-gray-600 hover:border-blue-400'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  )
+                })}
+              </div>
+              {(form.target_majors || []).length > 0 && (
+                <p className="text-xs text-gray-500 mt-2">
+                  已选：{(form.target_majors || []).join('、')}
+                </p>
+              )}
             </Field>
           </div>
         )}

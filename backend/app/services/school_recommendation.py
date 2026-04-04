@@ -2,6 +2,20 @@ from app.models.school import School
 from app.models.user import UserProfile
 
 
+def _majors_match(target_majors: list, school_majors: list) -> bool:
+    """
+    模糊匹配：目标专业与学校专业有交集，或存在包含关系。
+    例：'计算机' 可匹配 '计算机科学'；'人工智能' 可匹配 '人工智能'。
+    """
+    if not target_majors or not school_majors:
+        return False
+    for tm in target_majors:
+        for sm in school_majors:
+            if tm == sm or tm in sm or sm in tm:
+                return True
+    return False
+
+
 def _tier_max_ranking(institution_tier: str) -> int:
     """
     每个层次学生「合理申请」的最高排名上限，超过此排名视为冲刺。
@@ -19,7 +33,7 @@ def classify_school(profile: UserProfile, school: School):
     """
     分档逻辑：
     1. 国家过滤：不在目标国家 → 跳过
-    2. 专业过滤：目标专业与学校开设专业无交集 → 跳过
+    2. 专业过滤：目标专业与学校开设专业无交集（含模糊匹配）→ 跳过
     3. GPA 过滤：用户 GPA < 学校最低要求 - 0.5 → 跳过（差距太大）
     4. 分档规则（以 GPA 为主轴）：
        - 保底：GPA ≥ preferred，且排名在层次合理范围内
@@ -33,10 +47,10 @@ def classify_school(profile: UserProfile, school: School):
     if not target_countries or school.country not in target_countries:
         return None
 
-    # ── 2. 专业过滤 ──────────────────────────────────────────
-    target_majors = set(profile.target_majors or [])
-    school_majors = set(school.majors or [])
-    if not target_majors or not (target_majors & school_majors):
+    # ── 2. 专业过滤（模糊匹配）────────────────────────────────
+    target_majors = list(profile.target_majors or [])
+    school_majors = list(school.majors or [])
+    if not target_majors or not _majors_match(target_majors, school_majors):
         return None
 
     # ── 3. GPA 基础过滤 ──────────────────────────────────────
@@ -68,7 +82,7 @@ def classify_school(profile: UserProfile, school: School):
         # GPA 满足最低要求但低于 preferred → 匹配
         return 'match'
 
-    # user_gpa >= school_min - 0.5（前面已过滤 < -0.5 的情况）→ 冲刺
+    # user_gpa >= school_min - 0.5 → 冲刺
     return 'reach'
 
 
