@@ -10,6 +10,7 @@ import { Tabs } from '@/components/ui/Tabs'
 import { Input, Select } from '@/components/ui/Input'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Spinner } from '@/components/ui/Spinner'
 
 const TABS = [
   { key: '基础信息', label: '基础信息' },
@@ -57,14 +58,17 @@ export default function ProfilePage() {
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [expModal, setExpModal] = useState<{ open: boolean; experience?: Experience }>({ open: false })
 
   useEffect(() => {
-    getProfile().then(r => {
-      setProfile(r.data)
-      setForm(r.data)
-    })
-    getExperiences().then(r => setExperiences(r.data))
+    Promise.all([
+      getProfile().then(r => {
+        setProfile(r.data)
+        setForm(r.data)
+      }).catch(() => null),
+      getExperiences().then(r => setExperiences(r.data)).catch(() => null),
+    ]).finally(() => setLoading(false))
   }, [])
 
   const handleSave = async () => {
@@ -98,6 +102,12 @@ export default function ProfilePage() {
   }
 
   const completion = profile?.completion_rate ?? 0
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-24 gap-2 text-slate-400">
+      <Spinner /> <span className="text-sm">加载中...</span>
+    </div>
+  )
 
   return (
     <div className="p-8 max-w-3xl" style={{ animation: 'fade-in 0.3s ease-out' }}>
