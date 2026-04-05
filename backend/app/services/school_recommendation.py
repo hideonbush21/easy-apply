@@ -1,5 +1,22 @@
+import hashlib
+import json
+
 from app.models.school import School
 from app.models.user import UserProfile
+
+
+RECOMMENDATION_FIELDS = {'gpa', 'institution_tier', 'target_countries', 'target_majors'}
+
+
+def build_recommendation_hash(profile: UserProfile) -> str:
+    """对推荐相关字段计算 SHA256 指纹，用于判断缓存是否失效。"""
+    payload = json.dumps({
+        'gpa': float(profile.gpa) if profile.gpa is not None else None,
+        'institution_tier': profile.institution_tier,
+        'target_countries': sorted(profile.target_countries or []),
+        'target_majors': sorted(profile.target_majors or []),
+    }, sort_keys=True)
+    return hashlib.sha256(payload.encode()).hexdigest()
 
 
 def _majors_match(target_majors: list, school_majors: list) -> bool:
