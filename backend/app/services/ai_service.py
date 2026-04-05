@@ -19,23 +19,23 @@ def generate_recommendation(user_profile: dict, experiences: list, school_name: 
 
     experiences_str = '\n'.join(experience_text) if experience_text else '暂无经历信息'
 
-    prompt = f"""你是一位资深留学申请顾问，请根据以下学生背景信息，为申请 {school_name} 的 {major} 专业撰写一封个性化推荐信。
+    prompt = f"""You are a senior study abroad application consultant. Based on the student's background below, write a personalized recommendation letter for their application to {major} at {school_name}.
 
-学生背景：
-- 姓名：{user_profile.get('name', '申请人')}
-- 本科学校：{user_profile.get('home_institution', '')} ({user_profile.get('institution_tier', '')})
-- 专业：{user_profile.get('current_major', '')}
-- GPA：{user_profile.get('gpa', '')}/{user_profile.get('gpa_scale', 4.0)}
-- 语言成绩：{user_profile.get('language_scores', {})}
-- 主要经历：
+Student Background:
+- Name: {user_profile.get('name', 'Applicant')}
+- Undergraduate Institution: {user_profile.get('home_institution', '')} ({user_profile.get('institution_tier', '')})
+- Major: {user_profile.get('current_major', '')}
+- GPA: {user_profile.get('gpa', '')}/{user_profile.get('gpa_scale', 4.0)}
+- Language Scores: {user_profile.get('language_scores', {})}
+- Key Experiences:
 {experiences_str}
 
-推荐信要求：
-1. 采用正式学术推荐信格式
-2. 突出学生的学术能力和专业潜力
-3. 结合具体经历事例
-4. 说明为什么适合该学校和专业
-5. 字数控制在 500-800 字"""
+Requirements:
+1. Use formal academic recommendation letter format
+2. Highlight the student's academic abilities and professional potential
+3. Reference specific experiences and achievements
+4. Explain why the student is a strong fit for this program and institution
+5. Length: 500–800 words"""
 
     api_key = os.getenv('KIMI_API_KEY', '')
     if not api_key:
