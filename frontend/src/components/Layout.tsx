@@ -12,9 +12,9 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { to: '/', label: '首页', icon: LayoutDashboard, end: true },
+  { to: '/', label: '首页', icon: LayoutDashboard },
   { to: '/profile', label: '我的档案', icon: User },
-  { to: '/schools', label: '学校库', icon: School, end: true },
+  { to: '/schools', label: '学校库', icon: School },
   { to: '/schools/recommendations', label: '智能推荐', icon: Star },
   { to: '/applications', label: '申请管理', icon: FileText },
   { to: '/recommendations', label: '推荐信', icon: Mail },
@@ -44,11 +44,11 @@ export default function Layout() {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
+          {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
-              end={end}
+              end
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                   isActive
@@ -65,6 +65,7 @@ export default function Layout() {
           {user?.is_admin && (
             <NavLink
               to="/admin"
+              end
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                   isActive
