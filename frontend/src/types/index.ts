@@ -77,6 +77,14 @@ export interface RecommendationLetter {
   created_at: string
 }
 
+export interface SopLetter {
+  id: string
+  user_id?: string
+  application_id: string
+  content: string
+  created_at: string
+}
+
 export interface PaginatedResponse<T> {
   schools: T[]
   total: number

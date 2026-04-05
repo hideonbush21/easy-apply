@@ -10,7 +10,7 @@ import SchoolListPage from '@/pages/Schools/SchoolListPage'
 import SchoolDetailPage from '@/pages/Schools/SchoolDetailPage'
 import RecommendationsPage from '@/pages/Schools/RecommendationsPage'
 import ApplicationListPage from '@/pages/Applications/ApplicationListPage'
-import RecommendationPage from '@/pages/Recommendations/RecommendationPage'
+import DocumentsPage from '@/pages/Documents/DocumentsPage'
 import AdminDashboard from '@/pages/Admin/AdminDashboard'
 import UserManagePage from '@/pages/Admin/UserManagePage'
 
@@ -35,7 +35,8 @@ export default function App() {
           <Route path="schools/recommendations" element={<RecommendationsPage />} />
           <Route path="schools/:id" element={<SchoolDetailPage />} />
           <Route path="applications" element={<ApplicationListPage />} />
-          <Route path="recommendations" element={<RecommendationPage />} />
+          <Route path="documents" element={<DocumentsPage />} />
+          <Route path="recommendations" element={<Navigate to="/documents" replace />} />
 
           <Route
             path="admin"

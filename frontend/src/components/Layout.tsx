@@ -6,7 +6,7 @@ import {
   School,
   Star,
   FileText,
-  Mail,
+  BookOpen,
   LogOut,
   Shield,
 } from 'lucide-react'
@@ -17,7 +17,7 @@ const navItems = [
   { to: '/schools', label: '学校库', icon: School },
   { to: '/schools/recommendations', label: '智能推荐', icon: Star },
   { to: '/applications', label: '申请管理', icon: FileText },
-  { to: '/recommendations', label: '推荐信', icon: Mail },
+  { to: '/documents', label: '文书生成', icon: BookOpen },
 ]
 
 export default function Layout() {
