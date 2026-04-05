@@ -9,8 +9,27 @@ interface PaginationProps {
   className?: string
 }
 
+function getPageNumbers(page: number, pages: number): (number | '...')[] {
+  if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1)
+
+  const result: (number | '...')[] = [1]
+
+  if (page > 3) result.push('...')
+
+  const start = Math.max(2, page - 1)
+  const end = Math.min(pages - 1, page + 1)
+  for (let i = start; i <= end; i++) result.push(i)
+
+  if (page < pages - 2) result.push('...')
+  result.push(pages)
+
+  return result
+}
+
 export function Pagination({ page, pages, total, onPageChange, className }: PaginationProps) {
   if (pages <= 1) return null
+
+  const pageNumbers = getPageNumbers(page, pages)
 
   return (
     <div className={cn('flex items-center justify-between pt-4', className)}>
@@ -26,9 +45,12 @@ export function Pagination({ page, pages, total, onPageChange, className }: Pagi
           <ChevronLeft size={16} />
         </button>
 
-        {Array.from({ length: Math.min(pages, 7) }, (_, i) => {
-          const p = i + 1
-          return (
+        {pageNumbers.map((p, i) =>
+          p === '...' ? (
+            <span key={`ellipsis-${i}`} className="min-w-8 h-8 flex items-center justify-center text-xs text-slate-400">
+              ···
+            </span>
+          ) : (
             <button
               key={p}
               onClick={() => onPageChange(p)}
@@ -42,7 +64,7 @@ export function Pagination({ page, pages, total, onPageChange, className }: Pagi
               {p}
             </button>
           )
-        })}
+        )}
 
         <button
           onClick={() => onPageChange(page + 1)}

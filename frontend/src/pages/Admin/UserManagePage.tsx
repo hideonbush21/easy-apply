@@ -48,9 +48,11 @@ export default function UserManagePage() {
   const [detail, setDetail] = useState<UserDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
 
-  const fetchUsers = () => {
+  const fetchUsers = (overridePage?: number, overrideSearch?: string) => {
     setLoading(true)
-    api.get('/admin/users', { params: { search, page, per_page: 20 } })
+    api.get('/admin/users', {
+      params: { search: overrideSearch ?? search, page: overridePage ?? page, per_page: 20 },
+    })
       .then(r => setData(r.data))
       .finally(() => setLoading(false))
   }
@@ -60,14 +62,14 @@ export default function UserManagePage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setPage(1)
-    fetchUsers()
+    fetchUsers(1, search)
   }
 
   const handleDelete = async (id: string, nickname: string) => {
     if (!confirm(`确定删除用户 "${nickname}"?`)) return
     await api.delete(`/admin/users/${id}`)
     if (detail?.id === id) setDetail(null)
-    fetchUsers()
+    fetchUsers(page, search)
   }
 
   const handleResetPassword = async () => {

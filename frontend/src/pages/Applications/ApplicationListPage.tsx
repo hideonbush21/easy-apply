@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
 import { Select } from '@/components/ui/Input'
-import type { VariantProps } from 'class-variance-authority'
 
 const STATUSES = ['待申请', '申请中', '已提交', '面试中', '录取', '拒绝', '等待中', '撤销']
 
