@@ -4,7 +4,7 @@ import bcrypt
 import jwt
 from flask import Blueprint, request, jsonify, current_app
 from app.extensions import db
-from app.models.user import User, UserProfile
+from app.models.user import User, UserProfile, UserLoginLog
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -77,6 +77,11 @@ def login():
 
     secret = current_app.config['JWT_SECRET_KEY']
     tokens = _generate_tokens(str(user.id), secret)
+
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    db.session.add(UserLoginLog(user_id=user.id, ip_address=ip or None))
+    db.session.commit()
+
     return jsonify({
         'user': user.to_dict(),
         **tokens,

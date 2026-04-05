@@ -18,14 +18,34 @@ class User(db.Model):
     profile = db.relationship('UserProfile', backref='user', uselist=False, cascade='all, delete-orphan')
     experiences = db.relationship('Experience', backref='user', cascade='all, delete-orphan')
     applications = db.relationship('Application', backref='user', cascade='all, delete-orphan')
+    login_logs = db.relationship('UserLoginLog', backref='user', cascade='all, delete-orphan',
+                                 order_by='UserLoginLog.login_at.desc()')
 
     def to_dict(self):
+        last_log = self.login_logs[0] if self.login_logs else None
         return {
             'id': str(self.id),
             'nickname': self.nickname,
             'is_admin': self.is_admin,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'last_login_at': last_log.login_at.isoformat() if last_log else None,
+            'last_login_ip': last_log.ip_address if last_log else None,
+        }
+
+
+class UserLoginLog(db.Model):
+    __tablename__ = 'user_login_logs'
+
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    login_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    ip_address = db.Column(db.String(45))
+
+    def to_dict(self):
+        return {
+            'login_at': self.login_at.isoformat() if self.login_at else None,
+            'ip_address': self.ip_address,
         }
 
 
