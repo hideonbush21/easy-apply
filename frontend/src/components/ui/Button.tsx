@@ -4,20 +4,20 @@ import { cn } from './cn'
 import { Spinner } from './Spinner'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer',
+  'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-150 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer',
   {
     variants: {
       variant: {
         primary:
-          'bg-primary-600 text-white hover:bg-primary-700 shadow-sm',
+          'btn-gradient text-white shadow-lg shadow-violet-900/40 px-4 py-2 relative overflow-hidden',
         secondary:
-          'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-card',
+          'btn-glass-outline',
         ghost:
-          'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+          'text-slate-300 hover:bg-white/5 hover:text-white',
         danger:
-          'bg-danger-600 text-white hover:bg-danger-700 shadow-sm',
+          'bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 hover:border-rose-400/40',
         accent:
-          'bg-accent-600 text-white hover:bg-accent-700 shadow-sm',
+          'bg-gradient-to-r from-sky-500 to-cyan-500 text-white shadow-lg shadow-sky-900/40 hover:opacity-90',
       },
       size: {
         sm: 'text-xs px-3 py-1.5',

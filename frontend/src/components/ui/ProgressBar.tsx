@@ -8,18 +8,11 @@ interface ProgressBarProps {
   showLabel?: boolean
 }
 
-const heights = { sm: 'h-1.5', md: 'h-2' }
-const colors = {
-  primary: 'bg-primary-600',
-  success: 'bg-success-600',
-  warning: 'bg-warning-600',
-  danger:  'bg-danger-600',
-}
+const heights = { sm: 'h-1', md: 'h-2' }
 
 export function ProgressBar({
   value,
   size = 'md',
-  color = 'primary',
   className,
   showLabel,
 }: ProgressBarProps) {
@@ -28,14 +21,21 @@ export function ProgressBar({
     <div className={cn('w-full', className)}>
       {showLabel && (
         <div className="flex justify-between items-center mb-1">
-          <span className="text-xs text-slate-500">进度</span>
-          <span className="text-xs font-semibold text-slate-700 tabular-nums">{Math.round(pct)}%</span>
+          <span className="text-xs text-slate-400">进度</span>
+          <span className="text-xs font-semibold text-slate-300 tabular-nums">{Math.round(pct)}%</span>
         </div>
       )}
-      <div className={cn('w-full bg-slate-100 rounded-full overflow-hidden', heights[size])}>
+      <div
+        className={cn('w-full rounded-full overflow-hidden', heights[size])}
+        style={{ background: 'rgba(255,255,255,0.08)' }}
+      >
         <div
-          className={cn(colors[color], heights[size], 'rounded-full transition-all duration-500 ease-out')}
-          style={{ width: `${pct}%` }}
+          className={cn(heights[size], 'rounded-full transition-all duration-700 ease-out')}
+          style={{
+            width: `${pct}%`,
+            background: 'linear-gradient(90deg, #7c3aed 0%, #0ea5e9 100%)',
+            boxShadow: pct > 0 ? '0 0 8px rgba(139,92,246,0.5)' : 'none',
+          }}
         />
       </div>
     </div>
