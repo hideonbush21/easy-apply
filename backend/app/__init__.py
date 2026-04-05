@@ -18,6 +18,9 @@ def create_app(config_class=Config):
     from app.routes import register_routes
     register_routes(app)
 
+    with app.app_context():
+        db.create_all()
+
     @app.route('/health')
     def health():
         return {'status': 'ok'}
