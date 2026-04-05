@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '@/api/client'
 import { Users, FileText, School, TrendingUp } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Spinner } from '@/components/ui/Spinner'
 
 interface Stats {
   total_users: number
@@ -21,60 +24,75 @@ export default function AdminDashboard() {
   }, [])
 
   const statCards = stats ? [
-    { label: '注册用户', value: stats.total_users, icon: Users, color: 'bg-blue-50 text-blue-700' },
-    { label: '总申请数', value: stats.total_applications, icon: FileText, color: 'bg-purple-50 text-purple-700' },
+    { label: '注册用户', value: stats.total_users, icon: Users, color: 'bg-primary-50 text-primary-700' },
+    { label: '总申请数', value: stats.total_applications, icon: FileText, color: 'bg-accent-50 text-accent-700' },
     { label: '学校数量', value: stats.total_schools, icon: School, color: 'bg-amber-50 text-amber-700' },
   ] : []
 
   return (
-    <div className="p-8">
+    <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">管理后台</h2>
-          <p className="text-gray-500 text-sm mt-1">平台数据概览</p>
+          <h2 className="text-2xl font-bold text-slate-900">管理后台</h2>
+          <p className="text-slate-500 text-sm mt-1">平台数据概览</p>
         </div>
-        <Link
-          to="/admin/users"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-        >
-          用户管理
+        <Link to="/admin/users">
+          <Button>用户管理</Button>
         </Link>
       </div>
 
       {loading ? (
-        <div className="text-gray-400">加载中...</div>
+        <div className="flex items-center gap-2 text-slate-400">
+          <Spinner /> <span className="text-sm">加载中...</span>
+        </div>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-3 gap-5 mb-6">
             {statCards.map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center`}>
-                    <Icon size={22} />
+              <Card key={label}>
+                <Card.Body>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center shrink-0`}>
+                      <Icon size={22} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+                      <p
+                        className="text-3xl font-bold text-slate-900 tabular-nums"
+                        style={{ fontFamily: 'var(--font-display)' }}
+                      >
+                        {value}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">{label}</p>
-                    <p className="text-3xl font-bold text-gray-900">{value}</p>
-                  </div>
-                </div>
-              </div>
+                </Card.Body>
+              </Card>
             ))}
           </div>
 
           {stats && Object.keys(stats.application_status_distribution).length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                <TrendingUp size={18} /> 申请状态分布
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(stats.application_status_distribution).map(([status, count]) => (
-                  <div key={status} className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{count}</p>
-                    <p className="text-sm text-gray-500 mt-1">{status}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <Card>
+              <Card.Header>
+                <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                  <TrendingUp size={16} className="text-slate-400" /> 申请状态分布
+                </h3>
+              </Card.Header>
+              <Card.Body>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {Object.entries(stats.application_status_distribution).map(([status, count]) => (
+                    <div key={status} className="text-center p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <p
+                        className="text-2xl font-bold text-slate-900 tabular-nums"
+                        style={{ fontFamily: 'var(--font-display)' }}
+                      >
+                        {count}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">{status}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card.Body>
+            </Card>
           )}
         </>
       )}

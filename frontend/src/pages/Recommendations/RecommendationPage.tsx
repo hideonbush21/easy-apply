@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 import { getApplications } from '@/api/applications'
 import { generateRecommendation, getRecommendation } from '@/api/recommendations'
 import type { Application, RecommendationLetter } from '@/types'
-import { Sparkles, Download, ChevronDown } from 'lucide-react'
+import { Sparkles, Download } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Input'
+import { Spinner } from '@/components/ui/Spinner'
 
 export default function RecommendationPage() {
   const [applications, setApplications] = useState<Application[]>([])
@@ -63,82 +67,87 @@ export default function RecommendationPage() {
   const selectedApp = applications.find(a => a.id === selectedAppId)
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-8 max-w-4xl" style={{ animation: 'fade-in 0.3s ease-out' }}>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">推荐信生成</h2>
-        <p className="text-gray-500 text-sm mt-1">使用 AI 根据你的背景生成个性化推荐信</p>
+        <h2 className="text-2xl font-bold text-slate-900">推荐信生成</h2>
+        <p className="text-slate-500 text-sm mt-1">使用 AI 根据你的背景生成个性化推荐信</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">选择申请</label>
-          <div className="relative">
-            <select
-              value={selectedAppId}
-              onChange={e => handleSelectApp(e.target.value)}
-              className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+      <Card className="mb-5">
+        <Card.Body>
+          <Select
+            label="选择申请"
+            value={selectedAppId}
+            onChange={e => handleSelectApp(e.target.value)}
+          >
+            <option value="">-- 请选择一个申请 --</option>
+            {applications.map(app => (
+              <option key={app.id} value={app.id}>
+                {app.school?.name_cn || app.school?.name} · {app.major || '未指定专业'}
+              </option>
+            ))}
+          </Select>
+
+          {selectedApp && (
+            <div className="flex items-center gap-3 mt-3 p-3 bg-slate-50 rounded-xl text-sm text-slate-600 border border-slate-100">
+              <span className="font-medium text-slate-800">{selectedApp.school?.name_cn || selectedApp.school?.name}</span>
+              <span className="text-slate-300">·</span>
+              <span>{selectedApp.major || '未指定专业'}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-400">{selectedApp.school?.country}</span>
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-3 px-4 py-3 bg-danger-50 border border-danger-100 rounded-xl text-sm text-danger-600">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-4">
+            <Button
+              variant="accent"
+              onClick={handleGenerate}
+              disabled={!selectedAppId}
+              loading={generating}
             >
-              <option value="">-- 请选择一个申请 --</option>
-              {applications.map(app => (
-                <option key={app.id} value={app.id}>
-                  {app.school?.name_cn || app.school?.name} · {app.major || '未指定专业'}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <Sparkles size={16} />
+              {generating ? 'AI 生成中...' : letter ? '重新生成' : '生成推荐信'}
+            </Button>
           </div>
-        </div>
-
-        {selectedApp && (
-          <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 mb-4">
-            <span>{selectedApp.school?.name_cn || selectedApp.school?.name}</span>
-            <span>·</span>
-            <span>{selectedApp.major || '未指定专业'}</span>
-            <span>·</span>
-            <span className="text-gray-400">{selectedApp.school?.country}</span>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        <button
-          onClick={handleGenerate}
-          disabled={!selectedAppId || generating}
-          className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <Sparkles size={16} />
-          {generating ? 'AI 生成中...' : letter ? '重新生成' : '生成推荐信'}
-        </button>
-      </div>
+        </Card.Body>
+      </Card>
 
       {loading && (
-        <div className="text-center py-8 text-gray-400">加载中...</div>
+        <div className="flex items-center justify-center py-10 gap-2 text-slate-400">
+          <Spinner /> <span className="text-sm">加载中...</span>
+        </div>
       )}
 
       {letter && !loading && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-medium text-gray-900">推荐信内容</h3>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-400">生成于 {new Date(letter.created_at).toLocaleString('zh-CN')}</span>
-              <button
-                onClick={handleExport}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                <Download size={14} /> 导出文本
-              </button>
+        <Card>
+          <Card.Header>
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-slate-900">推荐信内容</h3>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400">
+                  生成于 {new Date(letter.created_at).toLocaleString('zh-CN')}
+                </span>
+                <Button variant="secondary" size="sm" onClick={handleExport}>
+                  <Download size={14} /> 导出文本
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="prose prose-sm max-w-none">
-            <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800 leading-relaxed bg-gray-50 rounded-lg p-4">
+          </Card.Header>
+          <Card.Body>
+            <pre
+              className="whitespace-pre-wrap text-sm text-slate-800 leading-relaxed bg-slate-50 rounded-xl p-5 border border-slate-100"
+              style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', lineHeight: '1.7' }}
+            >
               {letter.content}
             </pre>
-          </div>
-        </div>
+          </Card.Body>
+        </Card>
       )}
     </div>
   )

@@ -1,23 +1,33 @@
 import { useEffect, useState } from 'react'
 import { getApplications, updateApplication, deleteApplication } from '@/api/applications'
 import type { Application } from '@/types'
-import { Trash2, ChevronDown } from 'lucide-react'
+import { Trash2, ChevronDown, FileText } from 'lucide-react'
+import { Table } from '@/components/ui/Table'
+import { Badge } from '@/components/ui/Badge'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Spinner } from '@/components/ui/Spinner'
+import { Select } from '@/components/ui/Input'
+import type { VariantProps } from 'class-variance-authority'
 
 const STATUSES = ['待申请', '申请中', '已提交', '面试中', '录取', '拒绝', '等待中', '撤销']
-const STATUS_COLORS: Record<string, string> = {
-  '待申请': 'bg-gray-100 text-gray-700',
-  '申请中': 'bg-blue-100 text-blue-700',
-  '已提交': 'bg-indigo-100 text-indigo-700',
-  '面试中': 'bg-yellow-100 text-yellow-700',
-  '录取': 'bg-green-100 text-green-700',
-  '拒绝': 'bg-red-100 text-red-700',
-  '等待中': 'bg-orange-100 text-orange-700',
-  '撤销': 'bg-gray-100 text-gray-500',
+
+type BadgeVariant = 'default' | 'primary' | 'indigo' | 'warning' | 'success' | 'danger' | 'orange' | 'accent'
+
+const STATUS_BADGE: Record<string, BadgeVariant> = {
+  '待申请': 'default',
+  '申请中': 'primary',
+  '已提交': 'indigo',
+  '面试中': 'warning',
+  '录取':   'success',
+  '拒绝':   'danger',
+  '等待中': 'orange',
+  '撤销':   'default',
 }
-const PRIORITY_COLORS: Record<string, string> = {
-  '冲刺': 'text-red-600',
-  '匹配': 'text-blue-600',
-  '保底': 'text-green-600',
+
+const PRIORITY_CLS: Record<string, string> = {
+  '冲刺': 'text-danger-600 font-semibold',
+  '匹配': 'text-primary-600 font-semibold',
+  '保底': 'text-success-600 font-semibold',
 }
 
 export default function ApplicationListPage() {
@@ -44,81 +54,92 @@ export default function ApplicationListPage() {
 
   const filtered = filterStatus ? apps.filter(a => a.status === filterStatus) : apps
 
-  if (loading) return <div className="p-8 text-gray-400">加载中...</div>
+  if (loading) return (
+    <div className="flex items-center justify-center py-20 gap-2 text-slate-400">
+      <Spinner /> <span className="text-sm">加载中...</span>
+    </div>
+  )
 
   return (
-    <div className="p-8">
+    <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">申请管理</h2>
-          <p className="text-gray-500 text-sm mt-1">共 {apps.length} 个申请</p>
+          <h2 className="text-2xl font-bold text-slate-900">申请管理</h2>
+          <p className="text-slate-500 text-sm mt-1 tabular-nums">共 {apps.length} 个申请</p>
         </div>
-        <select
+        <Select
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-32"
         >
           <option value="">全部状态</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </Select>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          {apps.length === 0 ? '暂无申请，前往学校库添加' : '没有符合筛选条件的申请'}
-        </div>
+        <EmptyState
+          icon={<FileText size={20} />}
+          title={apps.length === 0 ? '暂无申请' : '没有符合筛选条件的申请'}
+          description={apps.length === 0 ? '前往学校库浏览并添加申请' : undefined}
+        />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">学校</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">专业</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">优先级</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">截止日期</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">状态</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map(app => (
-                <tr key={app.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">{app.school?.name_cn || app.school?.name}</p>
-                    <p className="text-xs text-gray-400">{app.school?.country} · #{app.school?.ranking}</p>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{app.major || '-'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`font-medium text-sm ${PRIORITY_COLORS[app.priority || ''] || 'text-gray-500'}`}>
-                      {app.priority || '-'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{app.application_deadline || '-'}</td>
-                  <td className="px-4 py-3">
-                    <div className="relative inline-block">
-                      <select
-                        value={app.status}
-                        onChange={e => handleStatusChange(app.id, e.target.value)}
-                        className={`pl-2.5 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer appearance-none ${STATUS_COLORS[app.status] || 'bg-gray-100 text-gray-700'}`}
-                      >
-                        {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      <ChevronDown size={11} className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleDelete(app.id)}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>学校</Table.Head>
+              <Table.Head className="w-36">专业</Table.Head>
+              <Table.Head className="w-20">优先级</Table.Head>
+              <Table.Head className="w-28">截止日期</Table.Head>
+              <Table.Head className="w-32">状态</Table.Head>
+              <Table.Head className="w-12"></Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {filtered.map(app => (
+              <Table.Row key={app.id}>
+                <Table.Cell>
+                  <p className="font-medium text-slate-900">{app.school?.name_cn || app.school?.name}</p>
+                  <p className="text-xs text-slate-400 mt-0.5 tabular-nums">{app.school?.country} · #{app.school?.ranking}</p>
+                </Table.Cell>
+                <Table.Cell className="text-slate-600">{app.major || '-'}</Table.Cell>
+                <Table.Cell>
+                  <span className={`text-sm ${PRIORITY_CLS[app.priority || ''] || 'text-slate-400'}`}>
+                    {app.priority || '-'}
+                  </span>
+                </Table.Cell>
+                <Table.Cell className="text-slate-600 tabular-nums">{app.application_deadline || '-'}</Table.Cell>
+                <Table.Cell>
+                  <div className="relative inline-block">
+                    <select
+                      value={app.status}
+                      onChange={e => handleStatusChange(app.id, e.target.value)}
+                      className="pl-2.5 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer appearance-none focus:outline-none"
+                      style={{ background: 'transparent' }}
                     >
-                      <Trash2 size={15} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <Badge
+                      variant={STATUS_BADGE[app.status] || 'default'}
+                      className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                    >
+                      {app.status}
+                    </Badge>
+                    <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-current opacity-60" />
+                  </div>
+                </Table.Cell>
+                <Table.Cell>
+                  <button
+                    onClick={() => handleDelete(app.id)}
+                    className="text-slate-300 hover:text-danger-500 transition-colors"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
       )}
     </div>
   )

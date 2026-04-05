@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { register } from '@/api/auth'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 
 export default function RegisterPage() {
   const [nickname, setNickname] = useState('')
@@ -33,66 +35,67 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">创建账号</h1>
-          <p className="text-sm text-gray-500 mb-6">开始你的留学申请之旅</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-primary-50/30">
+      <div className="w-full max-w-sm" style={{ animation: 'scale-in 0.25s ease-out' }}>
+        {/* Brand */}
+        <div className="text-center mb-8">
+          <h1
+            className="text-2xl font-bold text-slate-900 tracking-tight"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            EasyApply
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">留学申请助手</p>
+        </div>
+
+        <div
+          className="bg-white rounded-2xl p-8"
+          style={{ boxShadow: 'var(--shadow-modal)', border: '1px solid rgba(148,163,184,0.12)' }}
+        >
+          <h2 className="text-xl font-semibold text-slate-900 mb-1">创建账号</h2>
+          <p className="text-sm text-slate-500 mb-6">开始你的留学申请之旅</p>
 
           {error && (
-            <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <div className="mb-4 px-4 py-3 bg-danger-50 border border-danger-100 rounded-xl text-sm text-danger-600">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">用户名</label>
-              <input
-                type="text"
-                value={nickname}
-                onChange={e => setNickname(e.target.value)}
-                required
-                maxLength={50}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="2-50个字符"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="至少6位"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">确认密码</label>
-              <input
-                type="password"
-                value={confirm}
-                onChange={e => setConfirm(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="再次输入密码"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
+            <Input
+              label="用户名"
+              type="text"
+              value={nickname}
+              onChange={e => setNickname(e.target.value)}
+              required
+              maxLength={50}
+              placeholder="2-50个字符"
+            />
+            <Input
+              label="密码"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              minLength={6}
+              placeholder="至少6位"
+            />
+            <Input
+              label="确认密码"
+              type="password"
+              value={confirm}
+              onChange={e => setConfirm(e.target.value)}
+              required
+              placeholder="再次输入密码"
+            />
+            <Button type="submit" loading={loading} size="lg" className="w-full mt-2">
               {loading ? '注册中...' : '注册'}
-            </button>
+            </Button>
           </form>
 
-          <p className="mt-5 text-center text-sm text-gray-500">
+          <p className="mt-5 text-center text-sm text-slate-500">
             已有账号?{' '}
-            <Link to="/login" className="text-blue-600 hover:underline font-medium">
+            <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
               立即登录
             </Link>
           </p>
