@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify, g
 from app.models.school import School
 from app.models.user import UserProfile
-from app.services.school_recommendation import get_recommendations
+from app.services.school_recommendation import get_recommendations, build_recommendation_hash
 from app.utils.decorators import login_required
+from app.extensions import db
 
 school_bp = Blueprint('school', __name__, url_prefix='/api/schools')
 school_bp.strict_slashes = False
@@ -43,7 +44,16 @@ def get_recommendations_route():
     profile = g.user.profile
     if not profile:
         return jsonify({'error': 'Profile not found'}), 404
+
+    current_hash = build_recommendation_hash(profile)
+
+    if profile.recommendation_hash == current_hash and profile.recommendation_cache:
+        return jsonify(profile.recommendation_cache)
+
     result = get_recommendations(profile)
+    profile.recommendation_cache = result
+    profile.recommendation_hash = current_hash
+    db.session.commit()
     return jsonify(result)
 
 

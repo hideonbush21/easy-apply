@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, g
 from app.extensions import db
 from app.models.user import UserProfile
+from app.services.school_recommendation import RECOMMENDATION_FIELDS
 from app.utils.decorators import login_required
 
 profile_bp = Blueprint('profile', __name__, url_prefix='/api/profile')
@@ -32,6 +33,10 @@ def update_profile():
     for field in allowed_fields:
         if field in data:
             setattr(profile, field, data[field])
+
+    if RECOMMENDATION_FIELDS & data.keys():
+        profile.recommendation_cache = None
+        profile.recommendation_hash = None
 
     profile.completion_rate = profile.calculate_completion_rate()
     from datetime import datetime

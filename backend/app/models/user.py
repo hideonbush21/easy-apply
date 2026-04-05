@@ -45,6 +45,8 @@ class UserProfile(db.Model):
     target_majors = db.Column(JSONB)      # ["计算机科学"]
     degree_type = db.Column(db.String(20))  # master/phd/bachelor
     completion_rate = db.Column(Numeric(5, 2), default=0)
+    recommendation_cache = db.Column(JSONB)
+    recommendation_hash = db.Column(db.String(64))
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def calculate_completion_rate(self):
