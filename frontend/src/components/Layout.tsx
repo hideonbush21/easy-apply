@@ -14,7 +14,7 @@ import {
 const navItems = [
   { to: '/', label: '首页', icon: LayoutDashboard, end: true },
   { to: '/profile', label: '我的档案', icon: User },
-  { to: '/schools', label: '学校库', icon: School },
+  { to: '/schools', label: '学校库', icon: School, end: true },
   { to: '/schools/recommendations', label: '智能推荐', icon: Star },
   { to: '/applications', label: '申请管理', icon: FileText },
   { to: '/recommendations', label: '推荐信', icon: Mail },
