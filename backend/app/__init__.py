@@ -11,8 +11,14 @@ def create_app(config_class=Config):
 
     # Initialize extensions
     db.init_app(app)
-    # TODO: replace "*" with your Vercel frontend URL in production
-    cors.init_app(app, resources={r"/api/*": {"origins": os.getenv('ALLOWED_ORIGINS', '*')}})
+
+    # ALLOWED_ORIGINS 支持逗号分隔多个域名，或 * 通配
+    raw_origins = os.getenv('ALLOWED_ORIGINS', '*')
+    if raw_origins == '*':
+        origins = '*'
+    else:
+        origins = [o.strip() for o in raw_origins.split(',') if o.strip()]
+    cors.init_app(app, resources={r"/api/*": {"origins": origins}})
 
     # Register routes
     from app.routes import register_routes
