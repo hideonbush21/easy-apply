@@ -69,9 +69,9 @@ export default function SchoolListPage() {
               <Table.Row>
                 <Table.Head className="w-20">排名</Table.Head>
                 <Table.Head>学校</Table.Head>
-                <Table.Head className="w-24">国家</Table.Head>
-                <Table.Head className="w-28">GPA 要求</Table.Head>
-                <Table.Head className="w-28">截止日期</Table.Head>
+                <Table.Head className="w-20">国家</Table.Head>
+                <Table.Head className="w-24 whitespace-nowrap">GPA 要求</Table.Head>
+                <Table.Head className="w-28 whitespace-nowrap">截止日期</Table.Head>
                 <Table.Head className="w-16"></Table.Head>
               </Table.Row>
             </Table.Header>
@@ -86,10 +86,10 @@ export default function SchoolListPage() {
                     <div className="text-xs text-slate-400 mt-0.5">{school.name}</div>
                   </Table.Cell>
                   <Table.Cell className="text-slate-600">{school.country}</Table.Cell>
-                  <Table.Cell className="text-slate-600 tabular-nums">
+                  <Table.Cell className="text-slate-600 tabular-nums whitespace-nowrap">
                     {school.gpa_requirement.min} / {school.gpa_requirement.preferred}
                   </Table.Cell>
-                  <Table.Cell className="text-slate-600 tabular-nums">
+                  <Table.Cell className="text-slate-600 tabular-nums whitespace-nowrap">
                     {school.application_deadline || '-'}
                   </Table.Cell>
                   <Table.Cell>
