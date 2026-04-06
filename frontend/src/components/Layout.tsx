@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { to: '/', label: '首页', icon: LayoutDashboard },
+  { to: '/dashboard', label: '首页', icon: LayoutDashboard },
   { to: '/profile', label: '我的档案', icon: User },
   { to: '/schools', label: '学校库', icon: School },
   { to: '/schools/recommendations', label: '智能推荐', icon: Sparkles },

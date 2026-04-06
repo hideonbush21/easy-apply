@@ -26,7 +26,7 @@ export default function RegisterPage() {
     try {
       const res = await register(nickname, password)
       setAuth(res.data.access_token, res.data.user)
-      navigate('/')
+      navigate('/dashboard')
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } } }
       setError(e.response?.data?.error || '注册失败，请重试')

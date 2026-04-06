@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 
+import LandingPage from '@/pages/Landing/LandingPage'
 import LoginPage from '@/pages/Auth/LoginPage'
 import RegisterPage from '@/pages/Auth/RegisterPage'
 import Dashboard from '@/pages/Dashboard'
@@ -18,11 +19,14 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public landing page */}
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
+        {/* Protected app routes under /dashboard */}
         <Route
-          path="/"
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Layout />
@@ -36,7 +40,7 @@ export default function App() {
           <Route path="schools/:id" element={<SchoolDetailPage />} />
           <Route path="applications" element={<ApplicationListPage />} />
           <Route path="documents" element={<DocumentsPage />} />
-          <Route path="recommendations" element={<Navigate to="/documents" replace />} />
+          <Route path="recommendations" element={<Navigate to="/dashboard/documents" replace />} />
 
           <Route
             path="admin"
