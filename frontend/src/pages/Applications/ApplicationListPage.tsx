@@ -24,9 +24,9 @@ const STATUS_BADGE: Record<string, BadgeVariant> = {
 }
 
 const PRIORITY_CLS: Record<string, string> = {
-  '冲刺': 'text-danger-600 font-semibold',
-  '匹配': 'text-primary-600 font-semibold',
-  '保底': 'text-success-600 font-semibold',
+  '冲刺': 'text-rose-400 font-semibold',
+  '匹配': 'text-violet-400 font-semibold',
+  '保底': 'text-emerald-400 font-semibold',
 }
 
 export default function ApplicationListPage() {
@@ -63,8 +63,8 @@ export default function ApplicationListPage() {
     <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">申请管理</h2>
-          <p className="text-slate-500 text-sm mt-1 tabular-nums">共 {apps.length} 个申请</p>
+          <h2 className="text-2xl font-bold text-white">申请管理</h2>
+          <p className="text-slate-400 text-sm mt-1 tabular-nums">共 {apps.length} 个申请</p>
         </div>
         <Select
           value={filterStatus}
@@ -98,16 +98,16 @@ export default function ApplicationListPage() {
             {filtered.map(app => (
               <Table.Row key={app.id}>
                 <Table.Cell>
-                  <p className="font-medium text-slate-900">{app.school?.name_cn || app.school?.name}</p>
+                  <p className="font-medium text-white">{app.school?.name_cn || app.school?.name}</p>
                   <p className="text-xs text-slate-400 mt-0.5 tabular-nums">{app.school?.country} · #{app.school?.ranking}</p>
                 </Table.Cell>
-                <Table.Cell className="text-slate-600">{app.major || '-'}</Table.Cell>
+                <Table.Cell className="text-slate-300">{app.major || '-'}</Table.Cell>
                 <Table.Cell>
                   <span className={`text-sm ${PRIORITY_CLS[app.priority || ''] || 'text-slate-400'}`}>
                     {app.priority || '-'}
                   </span>
                 </Table.Cell>
-                <Table.Cell className="text-slate-600 tabular-nums">{app.application_deadline || '-'}</Table.Cell>
+                <Table.Cell className="text-slate-300 tabular-nums">{app.application_deadline || '-'}</Table.Cell>
                 <Table.Cell>
                   <div className="relative inline-block">
                     <select

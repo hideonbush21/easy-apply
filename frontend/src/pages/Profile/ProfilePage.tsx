@@ -112,7 +112,7 @@ export default function ProfilePage() {
   return (
     <div className="p-8 max-w-3xl" style={{ animation: 'fade-in 0.3s ease-out' }}>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">我的档案</h2>
+        <h2 className="text-2xl font-bold text-white">我的档案</h2>
         <div className="flex items-center gap-3 mt-3">
           <ProgressBar value={completion} className="flex-1" />
           <span className="text-sm font-medium text-slate-500 tabular-nums shrink-0">{Math.round(completion)}% 完整</span>
@@ -212,7 +212,7 @@ export default function ProfilePage() {
           {activeTab === '目标' && (
             <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">目标国家</label>
+                <label className="block text-sm font-medium text-slate-200 mb-2">目标国家</label>
                 <div className="flex gap-3 flex-wrap">
                   {COUNTRIES.map(c => {
                     const selected = (form.target_countries || []).includes(c)
@@ -229,8 +229,8 @@ export default function ProfilePage() {
                         }}
                         className={`px-4 py-1.5 rounded-full text-sm border transition-all duration-150 cursor-pointer ${
                           selected
-                            ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
-                            : 'border-slate-300 text-slate-600 hover:border-primary-400 hover:text-primary-600'
+                            ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+                            : 'border-white/20 text-slate-300 hover:border-violet-400 hover:text-violet-400'
                         }`}
                       >
                         {c}
@@ -240,7 +240,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">目标专业（可多选）</label>
+                <label className="block text-sm font-medium text-slate-200 mb-2">目标专业（可多选）</label>
                 <div className="flex flex-wrap gap-2">
                   {MAJORS_LIST.map(m => {
                     const selected = (form.target_majors || []).includes(m)
@@ -257,8 +257,8 @@ export default function ProfilePage() {
                         }}
                         className={`px-2.5 py-1 rounded-full text-xs border transition-all duration-150 cursor-pointer ${
                           selected
-                            ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
-                            : 'border-slate-200 text-slate-500 hover:border-primary-400 hover:text-primary-600'
+                            ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+                            : 'border-white/[0.12] text-slate-400 hover:border-violet-400 hover:text-violet-400'
                         }`}
                       >
                         {m}
@@ -292,25 +292,25 @@ export default function ProfilePage() {
               ) : (
                 <div className="space-y-3">
                   {experiences.map(exp => (
-                    <div key={exp.id} className="border border-slate-200 rounded-xl p-4 hover:border-slate-300 transition-colors">
+                    <div key={exp.id} className="border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.12] transition-colors">
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="primary" size="sm">{exp.type}</Badge>
-                            <span className="font-medium text-slate-900 text-sm">{exp.title}</span>
+                            <span className="font-medium text-white text-sm">{exp.title}</span>
                           </div>
                           {exp.organization && <p className="text-xs text-slate-400">{exp.organization}</p>}
                         </div>
                         <div className="flex gap-1.5">
                           <button
                             onClick={() => setExpModal({ open: true, experience: exp })}
-                            className="p-1.5 text-slate-300 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-violet-400 hover:bg-violet-500/10 rounded-lg transition-colors"
                           >
                             <Pencil size={14} />
                           </button>
                           <button
                             onClick={() => handleExpDelete(exp.id)}
-                            className="p-1.5 text-slate-300 hover:text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -324,11 +324,11 @@ export default function ProfilePage() {
           )}
 
           {activeTab !== '经历' && (
-            <div className="mt-6 flex items-center gap-3 pt-5 border-t border-slate-100">
+            <div className="mt-6 flex items-center gap-3 pt-5 border-t border-white/[0.06]">
               <Button onClick={handleSave} loading={saving}>
                 {saving ? '保存中...' : '保存'}
               </Button>
-              {saved && <span className="text-sm text-success-600 font-medium">已保存 ✓</span>}
+              {saved && <span className="text-sm text-emerald-400 font-medium">已保存 ✓</span>}
             </div>
           )}
         </Card.Body>

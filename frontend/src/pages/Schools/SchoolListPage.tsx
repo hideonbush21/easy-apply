@@ -32,8 +32,8 @@ export default function SchoolListPage() {
   return (
     <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">学校库</h2>
-        <p className="text-slate-500 text-sm mt-1">共收录 100 所知名院校</p>
+        <h2 className="text-2xl font-bold text-white">学校库</h2>
+        <p className="text-slate-400 text-sm mt-1">共收录 100 所知名院校</p>
       </div>
 
       {/* Filters */}
@@ -52,7 +52,7 @@ export default function SchoolListPage() {
             value={rankingMax}
             onChange={e => { setRankingMax(e.target.value); setPage(1) }}
             placeholder="排名前 N"
-            className="pl-8 pr-3 py-2 border border-slate-300 rounded-lg text-sm w-32 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+            className="pl-8 pr-3 py-2 border border-white/20 rounded-lg text-sm w-32 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/50 bg-white/5 text-slate-200 placeholder:text-slate-500"
           />
         </div>
       </div>
@@ -82,20 +82,20 @@ export default function SchoolListPage() {
                     #{school.ranking}
                   </Table.Cell>
                   <Table.Cell>
-                    <div className="font-medium text-slate-900">{school.name_cn || school.name}</div>
+                    <div className="font-medium text-white">{school.name_cn || school.name}</div>
                     <div className="text-xs text-slate-400 mt-0.5">{school.name}</div>
                   </Table.Cell>
-                  <Table.Cell className="text-slate-600">{school.country}</Table.Cell>
-                  <Table.Cell className="text-slate-600 tabular-nums whitespace-nowrap">
+                  <Table.Cell className="text-slate-300">{school.country}</Table.Cell>
+                  <Table.Cell className="text-slate-300 tabular-nums whitespace-nowrap">
                     {school.gpa_requirement.min} / {school.gpa_requirement.preferred}
                   </Table.Cell>
-                  <Table.Cell className="text-slate-600 tabular-nums whitespace-nowrap">
+                  <Table.Cell className="text-slate-300 tabular-nums whitespace-nowrap">
                     {school.application_deadline || '-'}
                   </Table.Cell>
                   <Table.Cell>
                     <Link
                       to={`/schools/${school.id}`}
-                      className="text-xs font-medium text-primary-600 hover:text-primary-700"
+                      className="text-xs font-medium text-violet-400 hover:text-violet-300"
                     >
                       详情
                     </Link>

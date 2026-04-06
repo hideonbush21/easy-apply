@@ -19,9 +19,9 @@ const CATEGORY_CONFIG: Record<Category, {
   desc: string
   priority: string
 }> = {
-  reach:  { label: '冲刺', headerCls: 'bg-rose-50 border-rose-200',   badgeVariant: 'danger',  desc: '匹配度 50-70%，有挑战性', priority: '冲刺' },
-  match:  { label: '匹配', headerCls: 'bg-primary-50 border-primary-200', badgeVariant: 'primary', desc: '匹配度 70-85%，较为合适', priority: '匹配' },
-  safety: { label: '保底', headerCls: 'bg-success-50 border-success-100', badgeVariant: 'success', desc: '匹配度 >85%，把握较大', priority: '保底' },
+  reach:  { label: '冲刺', headerCls: 'bg-rose-500/10 border-rose-500/20',     badgeVariant: 'danger',  desc: '匹配度 50-70%，有挑战性', priority: '冲刺' },
+  match:  { label: '匹配', headerCls: 'bg-violet-500/10 border-violet-500/20', badgeVariant: 'primary', desc: '匹配度 70-85%，较为合适', priority: '匹配' },
+  safety: { label: '保底', headerCls: 'bg-emerald-500/10 border-emerald-500/20', badgeVariant: 'success', desc: '匹配度 >85%，把握较大', priority: '保底' },
 }
 
 export default function RecommendationsPage() {
@@ -59,12 +59,12 @@ export default function RecommendationsPage() {
   return (
     <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">智能推荐</h2>
-        <p className="text-slate-500 text-sm mt-1">根据你的档案信息，为你推荐合适的院校</p>
+        <h2 className="text-2xl font-bold text-white">智能推荐</h2>
+        <p className="text-slate-400 text-sm mt-1">根据你的档案信息，为你推荐合适的院校</p>
       </div>
 
       {error && (
-        <div className="mb-6 px-4 py-3 bg-warning-50 border border-warning-100 rounded-xl text-sm text-warning-700">
+        <div className="mb-6 px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-sm text-amber-300">
           {error}。请先完善档案信息（GPA、目标国家、目标专业）。
         </div>
       )}
@@ -91,7 +91,7 @@ export default function RecommendationsPage() {
                     <Card key={school.id} className="p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-medium text-slate-900 text-sm">{school.name_cn || school.name}</p>
+                          <p className="font-medium text-white text-sm">{school.name_cn || school.name}</p>
                           <p className="text-xs text-slate-400 mt-0.5">{school.country} · <span className="tabular-nums">#{school.ranking}</span></p>
                         </div>
                         <div className="flex items-center gap-1 text-amber-500 shrink-0 ml-2">
@@ -102,7 +102,7 @@ export default function RecommendationsPage() {
                       <div className="flex justify-between items-center mt-3">
                         <Link
                           to={`/schools/${school.id}`}
-                          className="text-xs font-medium text-primary-600 hover:text-primary-700"
+                          className="text-xs font-medium text-violet-400 hover:text-violet-300"
                         >
                           查看详情
                         </Link>

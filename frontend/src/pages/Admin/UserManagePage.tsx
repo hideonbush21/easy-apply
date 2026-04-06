@@ -94,8 +94,8 @@ export default function UserManagePage() {
       {/* 左侧用户列表 */}
       <div className="flex-1 min-w-0">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-900">用户管理</h2>
-          <p className="text-slate-500 text-sm mt-1 tabular-nums">共 {data?.total ?? 0} 名用户</p>
+          <h2 className="text-2xl font-bold text-white">用户管理</h2>
+          <p className="text-slate-400 text-sm mt-1 tabular-nums">共 {data?.total ?? 0} 名用户</p>
         </div>
 
         <form onSubmit={handleSearch} className="flex gap-3 mb-6">
@@ -105,7 +105,7 @@ export default function UserManagePage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="搜索用户名..."
-              className="pl-8 pr-3 py-2 w-full border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+              className="pl-8 pr-3 py-2 w-full border border-white/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/50 bg-white/5 text-slate-200 placeholder:text-slate-500"
             />
           </div>
           <Button type="submit">搜索</Button>
@@ -131,9 +131,9 @@ export default function UserManagePage() {
                   <Table.Row
                     key={user.id}
                     onClick={() => handleRowClick(user)}
-                    className={`cursor-pointer ${detail?.id === user.id ? 'bg-primary-50' : ''}`}
+                    className={`cursor-pointer ${detail?.id === user.id ? 'bg-violet-500/10' : ''}`}
                   >
-                    <Table.Cell className="font-medium text-slate-900">
+                    <Table.Cell className="font-medium text-white">
                       <span className="flex items-center gap-1">
                         {user.nickname}
                         <ChevronRight size={13} className="text-slate-300" />
@@ -187,10 +187,10 @@ export default function UserManagePage() {
 
       {/* 右侧详情面板 */}
       {(detail || detailLoading) && (
-        <div className="w-80 flex-shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm p-5 sticky top-8">
+        <div className="w-80 flex-shrink-0 glass rounded-xl p-5 sticky top-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-900 text-sm">用户详情</h3>
-            <button onClick={() => setDetail(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
+            <h3 className="font-semibold text-white text-sm">用户详情</h3>
+            <button onClick={() => setDetail(null)} className="text-slate-400 hover:text-slate-200 transition-colors">
               <X size={15} />
             </button>
           </div>
@@ -211,7 +211,7 @@ export default function UserManagePage() {
                   ].map(([label, value]) => (
                     <div key={label} className="flex justify-between gap-2">
                       <dt className="text-slate-500 shrink-0">{label}</dt>
-                      <dd className="text-slate-700 font-mono text-xs text-right truncate">{value}</dd>
+                      <dd className="text-slate-200 font-mono text-xs text-right truncate">{value}</dd>
                     </div>
                   ))}
                 </dl>
@@ -232,13 +232,13 @@ export default function UserManagePage() {
                     ].map(([label, value]) => (
                       <div key={label} className="flex justify-between gap-2">
                         <dt className="text-slate-500 shrink-0">{label}</dt>
-                        <dd className="text-slate-700 text-right truncate max-w-[160px]">{value}</dd>
+                        <dd className="text-slate-200 text-right truncate max-w-[160px]">{value}</dd>
                       </div>
                     ))}
                     <div className="pt-1">
                       <div className="flex justify-between mb-1">
                         <span className="text-slate-500">档案完整度</span>
-                        <span className="text-slate-700">{detail.profile.completion_rate}%</span>
+                        <span className="text-slate-200">{detail.profile.completion_rate}%</span>
                       </div>
                       <ProgressBar value={detail.profile.completion_rate} size="sm" />
                     </div>
@@ -256,9 +256,9 @@ export default function UserManagePage() {
                 ) : (
                   <ul className="space-y-2">
                     {detail.applications.map(app => (
-                      <li key={app.id} className="flex items-start justify-between gap-2 py-1.5 border-b border-slate-100 last:border-0">
+                      <li key={app.id} className="flex items-start justify-between gap-2 py-1.5 border-b border-white/[0.06] last:border-0">
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-800 truncate text-xs">
+                          <p className="font-medium text-slate-100 truncate text-xs">
                             {app.school?.name_cn || app.school?.name || '-'}
                           </p>
                           <p className="text-slate-400 text-xs">{app.priority} · {app.application_deadline || '未知截止'}</p>

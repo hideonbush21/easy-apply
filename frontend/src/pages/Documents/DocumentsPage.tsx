@@ -84,8 +84,8 @@ function LetterPanel({
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">{labels.title}</h2>
-        <p className="text-slate-500 text-sm mt-1">{labels.desc}</p>
+        <h2 className="text-2xl font-bold text-white">{labels.title}</h2>
+        <p className="text-slate-400 text-sm mt-1">{labels.desc}</p>
       </div>
 
       <Card className="mb-5">
@@ -104,17 +104,17 @@ function LetterPanel({
           </Select>
 
           {selectedApp && (
-            <div className="flex items-center gap-3 mt-3 p-3 bg-slate-50 rounded-xl text-sm text-slate-600 border border-slate-100">
-              <span className="font-medium text-slate-800">{selectedApp.school?.name_cn || selectedApp.school?.name}</span>
-              <span className="text-slate-300">·</span>
+            <div className="flex items-center gap-3 mt-3 p-3 bg-white/[0.04] rounded-xl text-sm text-slate-300 border border-white/[0.06]">
+              <span className="font-medium text-slate-100">{selectedApp.school?.name_cn || selectedApp.school?.name}</span>
+              <span className="text-white/20">·</span>
               <span>{selectedApp.major || '未指定专业'}</span>
-              <span className="text-slate-300">·</span>
+              <span className="text-white/20">·</span>
               <span className="text-slate-400">{selectedApp.school?.country}</span>
             </div>
           )}
 
           {error && (
-            <div className="mt-3 px-4 py-3 bg-danger-50 border border-danger-100 rounded-xl text-sm text-danger-600">
+            <div className="mt-3 px-4 py-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-sm text-rose-300">
               {error}
             </div>
           )}
@@ -143,7 +143,7 @@ function LetterPanel({
         <Card>
           <Card.Header>
             <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-slate-900">{labels.btn}内容</h3>
+              <h3 className="font-semibold text-white">{labels.btn}内容</h3>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-slate-400">
                   生成于 {new Date(letter.created_at).toLocaleString('zh-CN')}
@@ -156,7 +156,7 @@ function LetterPanel({
           </Card.Header>
           <Card.Body>
             <pre
-              className="whitespace-pre-wrap text-sm text-slate-800 leading-relaxed bg-slate-50 rounded-xl p-5 border border-slate-100"
+              className="whitespace-pre-wrap text-sm text-slate-200 leading-relaxed bg-white/[0.04] rounded-xl p-5 border border-white/[0.06]"
               style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', lineHeight: '1.7' }}
             >
               {letter.content}
@@ -179,8 +179,8 @@ export default function DocumentsPage() {
   return (
     <div className="p-8 max-w-4xl" style={{ animation: 'fade-in 0.3s ease-out' }}>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">文书生成</h2>
-        <p className="text-slate-500 text-sm mt-1">AI 驱动的个性化留学文书生成工具</p>
+        <h2 className="text-2xl font-bold text-white">文书生成</h2>
+        <p className="text-slate-400 text-sm mt-1">AI 驱动的个性化留学文书生成工具</p>
       </div>
 
       <Tabs tabs={TABS} active={tab} onChange={setTab} className="mb-6" />

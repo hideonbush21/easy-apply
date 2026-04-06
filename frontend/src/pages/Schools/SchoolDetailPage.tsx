@@ -68,8 +68,8 @@ export default function SchoolDetailPage() {
         <Card.Body>
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">{school.name_cn || school.name}</h2>
-              <p className="text-slate-500 text-sm mt-1">{school.name}</p>
+              <h2 className="text-2xl font-bold text-white">{school.name_cn || school.name}</h2>
+              <p className="text-slate-400 text-sm mt-1">{school.name}</p>
               <div className="flex items-center gap-3 mt-3">
                 <span className="text-sm text-slate-500">{school.country}</span>
                 {school.ranking && (
@@ -79,7 +79,7 @@ export default function SchoolDetailPage() {
             </div>
           </div>
           {school.description && (
-            <p className="mt-4 text-sm text-slate-600 leading-relaxed">{school.description}</p>
+            <p className="mt-4 text-sm text-slate-300 leading-relaxed">{school.description}</p>
           )}
         </Card.Body>
       </Card>
@@ -88,40 +88,40 @@ export default function SchoolDetailPage() {
         <Card>
           <Card.Body className="py-4">
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">GPA 要求</h3>
-            <p className="text-sm text-slate-700">最低: <strong className="text-slate-900">{school.gpa_requirement.min}</strong></p>
-            <p className="text-sm text-slate-700 mt-1">推荐: <strong className="text-slate-900">{school.gpa_requirement.preferred}</strong></p>
+            <p className="text-sm text-slate-200">最低: <strong className="text-white">{school.gpa_requirement.min}</strong></p>
+            <p className="text-sm text-slate-200 mt-1">推荐: <strong className="text-white">{school.gpa_requirement.preferred}</strong></p>
           </Card.Body>
         </Card>
         <Card>
           <Card.Body className="py-4">
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">语言要求</h3>
             {school.language_requirement.toefl && (
-              <p className="text-sm text-slate-700">托福: <strong className="text-slate-900">{school.language_requirement.toefl}</strong></p>
+              <p className="text-sm text-slate-200">托福: <strong className="text-white">{school.language_requirement.toefl}</strong></p>
             )}
             {school.language_requirement.ielts && (
-              <p className="text-sm text-slate-700 mt-1">雅思: <strong className="text-slate-900">{school.language_requirement.ielts}</strong></p>
+              <p className="text-sm text-slate-200 mt-1">雅思: <strong className="text-white">{school.language_requirement.ielts}</strong></p>
             )}
           </Card.Body>
         </Card>
         <Card>
           <Card.Body className="py-4">
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">申请截止</h3>
-            <p className="text-sm font-medium text-slate-900 tabular-nums">{school.application_deadline || '请查询官网'}</p>
+            <p className="text-sm font-medium text-white tabular-nums">{school.application_deadline || '请查询官网'}</p>
           </Card.Body>
         </Card>
         <Card>
           <Card.Body className="py-4">
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">开设专业</h3>
-            <p className="text-sm text-slate-600">{school.majors?.slice(0, 5).join('、')}{school.majors?.length > 5 ? '...' : ''}</p>
+            <p className="text-sm text-slate-300">{school.majors?.slice(0, 5).join('、')}{school.majors?.length > 5 ? '...' : ''}</p>
           </Card.Body>
         </Card>
       </div>
 
       <Card>
         <Card.Body>
-          <h3 className="font-semibold text-slate-900 mb-4">快速添加申请</h3>
+          <h3 className="font-semibold text-white mb-4">快速添加申请</h3>
           {success && (
-            <div className="mb-4 px-4 py-3 bg-success-50 border border-success-100 rounded-xl text-sm text-success-700">
+            <div className="mb-4 px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm text-emerald-300">
               已成功添加到申请列表
             </div>
           )}
