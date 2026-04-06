@@ -10,6 +10,20 @@ from app.models.user import User, UserProfile, UserLoginLog
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 _SHA256_RE = re.compile(r'^[0-9a-f]{64}$')
+_V2_PREFIX = 'v2:'
+
+
+def _hash_v2(sha256_hex: str) -> str:
+    """bcrypt(sha256) — new scheme, stored with 'v2:' prefix."""
+    return _V2_PREFIX + bcrypt.hashpw(sha256_hex.encode(), bcrypt.gensalt()).decode()
+
+
+def _check_v2(sha256_hex: str, stored: str) -> bool:
+    return bcrypt.checkpw(sha256_hex.encode(), stored[len(_V2_PREFIX):].encode())
+
+
+def _is_v2(stored: str) -> bool:
+    return stored.startswith(_V2_PREFIX)
 
 
 def _generate_tokens(user_id: str, secret: str) -> dict:
@@ -45,8 +59,7 @@ def register():
     if User.query.filter_by(nickname=nickname).first():
         return jsonify({'error': 'nickname already taken'}), 409
 
-    password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-    user = User(nickname=nickname, password_hash=password_hash)
+    user = User(nickname=nickname, password_hash=_hash_v2(password))
     db.session.add(user)
     db.session.flush()
 
@@ -77,20 +90,53 @@ def login():
     if not user:
         return jsonify({'error': 'Invalid credentials'}), 401
 
-    if not bcrypt.checkpw(password.encode(), user.password_hash.encode()):
+    # Legacy v1 account (bcrypt(plaintext)) — ask frontend to retry with plaintext
+    if not _is_v2(user.password_hash):
+        return jsonify({'error': 'legacy account', 'code': 'LEGACY_ACCOUNT'}), 401
+
+    if not _check_v2(password, user.password_hash):
         return jsonify({'error': 'Invalid credentials'}), 401
 
+    return _issue_tokens_and_log(user)
+
+
+@auth_bp.route('/legacy-login', methods=['POST'])
+def legacy_login():
+    """Accepts plaintext password for v1 accounts, migrates to v2 on success."""
+    data = request.get_json(silent=True) or {}
+    nickname = (data.get('nickname') or '').strip()
+    plaintext = data.get('password', '')
+
+    if not nickname or not plaintext:
+        return jsonify({'error': 'nickname and password are required'}), 400
+
+    user = User.query.filter_by(nickname=nickname).first()
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    # Only allow this endpoint for v1 accounts
+    if _is_v2(user.password_hash):
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    if not bcrypt.checkpw(plaintext.encode(), user.password_hash.encode()):
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    # Migrate: re-hash as v2 using sha256 of the plaintext
+    import hashlib
+    sha256_hex = hashlib.sha256(plaintext.encode()).hexdigest()
+    user.password_hash = _hash_v2(sha256_hex)
+    db.session.commit()
+
+    return _issue_tokens_and_log(user)
+
+
+def _issue_tokens_and_log(user: User):
     secret = current_app.config['JWT_SECRET_KEY']
     tokens = _generate_tokens(str(user.id), secret)
-
     ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
     db.session.add(UserLoginLog(user_id=user.id, ip_address=ip or None))
     db.session.commit()
-
-    return jsonify({
-        'user': user.to_dict(),
-        **tokens,
-    })
+    return jsonify({'user': user.to_dict(), **tokens})
 
 
 @auth_bp.route('/refresh', methods=['POST'])

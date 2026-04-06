@@ -11,6 +11,17 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 admin_bp.strict_slashes = False
 
 _SHA256_RE = re.compile(r'^[0-9a-f]{64}$')
+_V2_PREFIX = 'v2:'
+
+
+def _hash_v2(sha256_hex: str) -> str:
+    return _V2_PREFIX + bcrypt.hashpw(sha256_hex.encode(), bcrypt.gensalt()).decode()
+
+
+def _check_password(password: str, stored: str) -> bool:
+    if stored.startswith(_V2_PREFIX):
+        return bcrypt.checkpw(password.encode(), stored[len(_V2_PREFIX):].encode())
+    return bcrypt.checkpw(password.encode(), stored.encode())
 
 
 @admin_bp.route('/login', methods=['POST'])
@@ -29,7 +40,7 @@ def admin_login():
     user = User.query.filter_by(nickname=nickname, is_admin=True).first()
     if not user:
         return jsonify({'error': 'Invalid credentials'}), 401
-    if not bcrypt.checkpw(password.encode(), user.password_hash.encode()):
+    if not _check_password(password, user.password_hash):
         return jsonify({'error': 'Invalid credentials'}), 401
 
     now = datetime.utcnow()
@@ -123,7 +134,7 @@ def reset_password(user_id):
     new_password = data.get('new_password', '')
     if not _SHA256_RE.match(new_password):
         return jsonify({'error': 'invalid password format'}), 400
-    user.password_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+    user.password_hash = _hash_v2(new_password)
     user.updated_at = datetime.utcnow()
     db.session.commit()
     return jsonify({'message': 'password reset successfully'})

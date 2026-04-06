@@ -9,7 +9,16 @@ async function sha256Hex(message: string): Promise<string> {
 
 export const login = async (nickname: string, password: string) => {
   const hashedPassword = await sha256Hex(password)
-  return api.post('/auth/login', { nickname, password: hashedPassword })
+  try {
+    return await api.post('/auth/login', { nickname, password: hashedPassword })
+  } catch (err: unknown) {
+    const e = err as { response?: { data?: { code?: string } } }
+    if (e.response?.data?.code === 'LEGACY_ACCOUNT') {
+      // Transparent migration: re-try with plaintext, backend will re-hash on success
+      return api.post('/auth/legacy-login', { nickname, password })
+    }
+    throw err
+  }
 }
 
 export const register = async (nickname: string, password: string) => {
