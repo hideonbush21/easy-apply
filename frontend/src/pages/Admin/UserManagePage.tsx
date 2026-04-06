@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '@/api/client'
+import { sha256Hex } from '@/api/auth'
 import type { User, UserProfile, Application } from '@/types'
 import { Trash2, Search, RefreshCw, X, ChevronRight } from 'lucide-react'
 import { Table } from '@/components/ui/Table'
@@ -74,7 +75,8 @@ export default function UserManagePage() {
 
   const handleResetPassword = async () => {
     if (!resetModal.userId || newPassword.length < 6) return
-    await api.post(`/admin/users/${resetModal.userId}/reset-password`, { new_password: newPassword })
+    const hashedPassword = await sha256Hex(newPassword)
+    await api.post(`/admin/users/${resetModal.userId}/reset-password`, { new_password: hashedPassword })
     setResetModal({ open: false })
     setNewPassword('')
     alert('密码已重置')

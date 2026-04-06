@@ -1,4 +1,5 @@
 import uuid
+import re
 from datetime import datetime, timedelta
 import bcrypt
 import jwt
@@ -7,6 +8,8 @@ from app.extensions import db
 from app.models.user import User, UserProfile, UserLoginLog
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+_SHA256_RE = re.compile(r'^[0-9a-f]{64}$')
 
 
 def _generate_tokens(user_id: str, secret: str) -> dict:
@@ -36,8 +39,8 @@ def register():
         return jsonify({'error': 'nickname and password are required'}), 400
     if len(nickname) > 50:
         return jsonify({'error': 'nickname too long'}), 400
-    if len(password) < 6:
-        return jsonify({'error': 'password must be at least 6 characters'}), 400
+    if not _SHA256_RE.match(password):
+        return jsonify({'error': 'invalid password format'}), 400
 
     if User.query.filter_by(nickname=nickname).first():
         return jsonify({'error': 'nickname already taken'}), 409
@@ -67,6 +70,8 @@ def login():
 
     if not nickname or not password:
         return jsonify({'error': 'nickname and password are required'}), 400
+    if not _SHA256_RE.match(password):
+        return jsonify({'error': 'invalid password format'}), 400
 
     user = User.query.filter_by(nickname=nickname).first()
     if not user:

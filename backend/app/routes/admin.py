@@ -1,3 +1,4 @@
+import re
 import bcrypt
 from datetime import datetime
 from flask import Blueprint, request, jsonify, g
@@ -8,6 +9,8 @@ from app.utils.decorators import admin_required
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 admin_bp.strict_slashes = False
+
+_SHA256_RE = re.compile(r'^[0-9a-f]{64}$')
 
 
 @admin_bp.route('/login', methods=['POST'])
@@ -20,6 +23,8 @@ def admin_login():
 
     if not nickname or not password:
         return jsonify({'error': 'nickname and password are required'}), 400
+    if not _SHA256_RE.match(password):
+        return jsonify({'error': 'invalid password format'}), 400
 
     user = User.query.filter_by(nickname=nickname, is_admin=True).first()
     if not user:
@@ -116,8 +121,8 @@ def reset_password(user_id):
         return jsonify({'error': 'User not found'}), 404
     data = request.get_json(silent=True) or {}
     new_password = data.get('new_password', '')
-    if len(new_password) < 6:
-        return jsonify({'error': 'password must be at least 6 characters'}), 400
+    if not _SHA256_RE.match(new_password):
+        return jsonify({'error': 'invalid password format'}), 400
     user.password_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
     user.updated_at = datetime.utcnow()
     db.session.commit()
