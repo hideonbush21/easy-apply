@@ -11,6 +11,8 @@ class Config:
     # Supabase / Heroku returns "postgres://", SQLAlchemy 3.x requires "postgresql://"
     SQLALCHEMY_DATABASE_URI = _db_url.replace('postgres://', 'postgresql://', 1)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # 5秒连接超时，避免 DB 不可达时卡死启动
+    SQLALCHEMY_ENGINE_OPTIONS = {'connect_args': {'connect_timeout': 5}}
     KIMI_API_KEY = os.getenv('KIMI_API_KEY', '')
     FLASK_ENV = os.getenv('FLASK_ENV', 'development')
     DEBUG = FLASK_ENV == 'development'

@@ -3,6 +3,7 @@ import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 
 import LandingPage from '@/pages/Landing/LandingPage'
+import OnboardingPage from '@/pages/Onboarding/OnboardingPage'
 import LoginPage from '@/pages/Auth/LoginPage'
 import RegisterPage from '@/pages/Auth/RegisterPage'
 import Dashboard from '@/pages/Dashboard'
@@ -21,6 +22,7 @@ export default function App() {
       <Routes>
         {/* Public landing page */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 

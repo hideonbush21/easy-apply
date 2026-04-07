@@ -293,7 +293,7 @@ export default function LandingPage() {
             </p>
 
             <div className="lp-reveal" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 32, transitionDelay: '0.3s' }}>
-              <button onClick={() => navigate('/register')} className="lp-hero-btn-primary"
+              <button onClick={() => navigate('/onboarding')} className="lp-hero-btn-primary"
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '16px 32px', color: 'white', fontWeight: 600, borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 16, boxShadow: '0 8px 20px rgba(29,211,176,0.3)' }}>
                 免费开始使用 <ArrowRight size={20} />
               </button>
@@ -522,7 +522,7 @@ export default function LandingPage() {
           </div>
 
           <div className="lp-reveal" style={{ textAlign: 'center', marginTop: 64, transitionDelay: '0.4s' }}>
-            <button onClick={() => navigate('/register')} className="lp-gradient-btn"
+            <button onClick={() => navigate('/onboarding')} className="lp-gradient-btn"
               style={{ padding: '16px 32px', border: 'none', color: 'white', fontWeight: 600, borderRadius: 999, cursor: 'pointer', fontSize: 16, boxShadow: '0 8px 20px rgba(29,211,176,0.3)' }}>
               立即开始体验
             </button>
@@ -585,7 +585,7 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <button onClick={() => navigate('/register')}
+                <button onClick={() => navigate(plan.cta === '免费开始' ? '/onboarding' : '/register')}
                   style={{
                     width: '100%', padding: '12px 0', borderRadius: 999, fontWeight: 600, cursor: 'pointer', fontSize: 16, border: 'none',
                     ...(plan.highlight
@@ -689,7 +689,7 @@ export default function LandingPage() {
           <div className="lp-reveal" style={{ textAlign: 'center' }}>
             <h2 style={{ fontSize: 'clamp(1.875rem, 5vw, 3rem)', fontWeight: 700, color: 'white', marginBottom: 24 }}>准备好开始你的留学之旅了吗？</h2>
             <p style={{ fontSize: 20, color: 'rgba(255,255,255,0.9)', marginBottom: 40 }}>加入10,000+学生，用AI让申请更简单</p>
-            <button onClick={() => navigate('/register')}
+            <button onClick={() => navigate('/onboarding')}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 32px', background: 'white', color: '#1dd3b0', fontWeight: 600, borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', transition: 'box-shadow 0.3s' }}
               onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.2)')}
               onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)')}>

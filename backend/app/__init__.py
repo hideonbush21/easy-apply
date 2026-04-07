@@ -25,7 +25,10 @@ def create_app(config_class=Config):
     register_routes(app)
 
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as e:
+            print(f'[Warning] db.create_all() skipped: {e}')
 
     @app.route('/health')
     def health():
