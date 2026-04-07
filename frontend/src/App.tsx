@@ -4,6 +4,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 
 import LandingPage from '@/pages/Landing/LandingPage'
 import OnboardingPage from '@/pages/Onboarding/OnboardingPage'
+import TimelinePage from '@/pages/Timeline/TimelinePage'
 import LoginPage from '@/pages/Auth/LoginPage'
 import RegisterPage from '@/pages/Auth/RegisterPage'
 import Dashboard from '@/pages/Dashboard'
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="schools/:id" element={<SchoolDetailPage />} />
           <Route path="applications" element={<ApplicationListPage />} />
           <Route path="documents" element={<DocumentsPage />} />
+          <Route path="timeline" element={<TimelinePage />} />
           <Route path="recommendations" element={<Navigate to="/dashboard/documents" replace />} />
 
           <Route

@@ -9,6 +9,7 @@ import {
   BookOpen,
   LogOut,
   Shield,
+  CalendarDays,
 } from 'lucide-react'
 
 const navItems = [
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/schools/recommendations', label: '智能推荐', icon: Sparkles },
   { to: '/applications', label: '申请管理', icon: FileText },
   { to: '/documents', label: '文书生成', icon: BookOpen },
+  { to: '/dashboard/timeline', label: '申请时间轴', icon: CalendarDays },
 ]
 
 export default function Layout() {
