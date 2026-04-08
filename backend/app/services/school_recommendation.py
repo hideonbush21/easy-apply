@@ -9,7 +9,6 @@ RECOMMENDATION_FIELDS = {'gpa', 'institution_tier', 'target_countries', 'target_
 
 
 def build_recommendation_hash(profile: UserProfile) -> str:
-    """对推荐相关字段计算 SHA256 指纹，用于判断缓存是否失效。"""
     payload = json.dumps({
         'gpa': float(profile.gpa) if profile.gpa is not None else None,
         'institution_tier': profile.institution_tier,
@@ -20,10 +19,6 @@ def build_recommendation_hash(profile: UserProfile) -> str:
 
 
 def _majors_match(target_majors: list, school_majors: list) -> bool:
-    """
-    模糊匹配：目标专业与学校专业有交集，或存在包含关系。
-    例：'计算机' 可匹配 '计算机科学'；'人工智能' 可匹配 '人工智能'。
-    """
     if not target_majors or not school_majors:
         return False
     for tm in target_majors:
@@ -34,10 +29,6 @@ def _majors_match(target_majors: list, school_majors: list) -> bool:
 
 
 def _tier_max_ranking(institution_tier: str) -> int:
-    """
-    每个层次学生「合理申请」的最高排名上限，超过此排名视为冲刺。
-    c9/985 → 可申 Top 200；211 → Top 400；其余 → 全部
-    """
     tier = (institution_tier or '').lower()
     if tier in ('c9', '985'):
         return 200
@@ -48,71 +39,57 @@ def _tier_max_ranking(institution_tier: str) -> int:
 
 def classify_school(profile: UserProfile, school: School):
     """
-    分档逻辑：
-    1. 国家过滤：不在目标国家 → 跳过
-    2. 专业过滤：目标专业与学校开设专业无交集（含模糊匹配）→ 跳过
-    3. GPA 过滤：用户 GPA < 学校最低要求 - 0.5 → 跳过（差距太大）
-    4. 分档规则（以 GPA 为主轴）：
-       - 保底：GPA ≥ preferred，且排名在层次合理范围内
-       - 匹配：GPA ≥ min（但 < preferred），或 GPA ≥ preferred 但排名超出层次舒适区
-       - 冲刺：GPA ≥ min - 0.5（差距在容忍范围内）
-
-    返回 'safety' | 'match' | 'reach' | None
+    分档逻辑（容灾版）:
+    - 国家过滤：profile 填了目标国家时才过滤，未填则不过滤
+    - 专业过滤：school.majors 有值时才做匹配过滤；school 未录入专业数据则跳过专业过滤
+    - GPA 分档：school.gpa_requirement 有值时按 GPA 分档；无值则按排名粗分
     """
-    # ── 1. 国家过滤 ──────────────────────────────────────────
+    # ── 1. 国家过滤（仅 profile 填了目标国家时生效）──────────
     target_countries = profile.target_countries or []
-    if not target_countries or school.country not in target_countries:
+    if target_countries and school.country not in target_countries:
         return None
 
-    # ── 2. 专业过滤（模糊匹配）────────────────────────────────
+    # ── 2. 专业过滤（仅 school 有专业数据时才过滤）──────────
     target_majors = list(profile.target_majors or [])
     school_majors = list(school.majors or [])
-    if not target_majors or not _majors_match(target_majors, school_majors):
-        return None
+    if school_majors and target_majors:
+        # 双方都有数据才做匹配过滤
+        if not _majors_match(target_majors, school_majors):
+            return None
 
-    # ── 3. GPA 基础过滤 ──────────────────────────────────────
+    # ── 3. GPA / 排名 分档 ───────────────────────────────────
     user_gpa = float(profile.gpa) if profile.gpa is not None else None
     req = school.gpa_requirement or {}
-    school_min = float(req.get('min', 2.5))
-    school_preferred = float(req.get('preferred', school_min + 0.3))
+    school_min = float(req['min']) if req.get('min') is not None else None
+    school_preferred = float(req['preferred']) if req.get('preferred') is not None else None
 
-    if user_gpa is None:
-        # GPA 未填写，全部归入冲刺（提示用户完善档案）
-        return 'reach'
-
-    if user_gpa < school_min - 0.5:
-        return None  # 差距过大，不推荐
-
-    # ── 4. 分档 ──────────────────────────────────────────────
     ranking = school.ranking or 9999
     tier_limit = _tier_max_ranking(profile.institution_tier)
 
-    if user_gpa >= school_preferred and ranking <= tier_limit:
-        # GPA 超过 preferred，且排名在本层次合理范围 → 保底
-        return 'safety'
+    # school 有 GPA 要求时按 GPA 分档
+    if school_min is not None and school_preferred is not None and user_gpa is not None:
+        if user_gpa < school_min - 0.5:
+            return None  # 差距过大，不推荐
+        if user_gpa >= school_preferred and ranking <= tier_limit:
+            return 'safety'
+        if user_gpa >= school_preferred and ranking > tier_limit:
+            return 'match'
+        if user_gpa >= school_min:
+            return 'match'
+        return 'reach'
 
-    if user_gpa >= school_preferred and ranking > tier_limit:
-        # GPA 够但学校排名超出本层次舒适区 → 匹配（有压力）
+    # school 无 GPA 数据，或 profile 无 GPA，按排名粗分
+    if ranking <= 50:
+        return 'reach'
+    if ranking <= 200:
         return 'match'
-
-    if user_gpa >= school_min:
-        # GPA 满足最低要求但低于 preferred → 匹配
-        return 'match'
-
-    # user_gpa >= school_min - 0.5 → 冲刺
-    return 'reach'
+    return 'safety'
 
 
 def get_recommendations(profile: UserProfile) -> dict:
-    """
-    返回按国家+专业过滤后、以 GPA 为主轴分档的学校列表。
-    每档内部按排名升序（越靠前越好）。
-    """
     schools = School.query.order_by(School.ranking.asc().nullslast()).all()
 
-    reach = []
-    match = []
-    safety = []
+    reach, match, safety = [], [], []
 
     for school in schools:
         tier = classify_school(profile, school)
@@ -133,8 +110,4 @@ def get_recommendations(profile: UserProfile) -> dict:
         else:
             reach.append(entry)
 
-    return {
-        'reach': reach,    # 冲刺
-        'match': match,    # 匹配
-        'safety': safety,  # 保底
-    }
+    return {'reach': reach, 'match': match, 'safety': safety}
