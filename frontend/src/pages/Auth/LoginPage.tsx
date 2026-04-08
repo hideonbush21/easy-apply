@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       const res = await login(nickname, password)
       setAuth(res.data.access_token, res.data.user)
-      navigate('/dashboard')
+      window.location.href = '/dashboard'
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } } }
       setError(e.response?.data?.error || '登录失败，请重试')
