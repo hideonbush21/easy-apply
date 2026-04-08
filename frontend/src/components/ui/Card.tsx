@@ -16,7 +16,7 @@ function Card({ className, hover, ...props }: CardProps) {
 function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('px-6 py-4 border-b border-white/[0.06]', className)}
+      className={cn('px-6 py-4 border-b border-gray-100', className)}
       {...props}
     />
   )
@@ -29,7 +29,7 @@ function CardBody({ className, ...props }: React.HTMLAttributes<HTMLDivElement>)
 function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('px-6 py-4 border-t border-white/[0.06] bg-white/[0.02] rounded-b-xl', className)}
+      className={cn('px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl', className)}
       {...props}
     />
   )
