@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getProfile, updateProfile, getExperiences, createExperience, updateExperience, deleteExperience } from '@/api/profile'
 import type { UserProfile, Experience } from '@/types'
 import ExperienceModal from './ExperienceModal'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Sparkles } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -52,6 +53,7 @@ const MAJORS_LIST = [
 ]
 
 export default function ProfilePage() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('基础信息')
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [form, setForm] = useState<Partial<UserProfile>>({})
@@ -329,6 +331,35 @@ export default function ProfilePage() {
                 {saving ? '保存中...' : '保存'}
               </Button>
               {saved && <span className="text-sm text-emerald-400 font-medium">已保存 ✓</span>}
+              <button
+                onClick={async () => {
+                  if (saving) return
+                  setSaving(true)
+                  try {
+                    const res = await updateProfile(form)
+                    setProfile(res.data)
+                    setForm(res.data)
+                  } finally {
+                    setSaving(false)
+                  }
+                  navigate('/dashboard/schools/recommendations')
+                }}
+                style={{
+                  marginLeft: 'auto',
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '9px 20px',
+                  background: 'linear-gradient(135deg,#1dd3b0,#10b981)',
+                  border: 'none', borderRadius: 10, cursor: 'pointer',
+                  fontSize: 14, fontWeight: 600, color: '#fff',
+                  boxShadow: '0 4px 14px rgba(29,211,176,0.35)',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 20px rgba(29,211,176,0.5)')}
+                onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 4px 14px rgba(29,211,176,0.35)')}
+              >
+                <Sparkles size={15} />
+                生成推荐
+              </button>
             </div>
           )}
         </Card.Body>
