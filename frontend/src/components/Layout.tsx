@@ -33,25 +33,6 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-screen" style={{ background: '#f8fdfb' }}>
-      {/* Ambient blobs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 0 }}>
-        <div className="blob" style={{
-          width: 480, height: 480, top: '-8%', left: '-4%',
-          background: 'radial-gradient(circle, rgba(29,211,176,0.12) 0%, transparent 70%)',
-          animationDuration: '18s',
-        }} />
-        <div className="blob" style={{
-          width: 360, height: 360, bottom: '4%', right: '8%',
-          background: 'radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%)',
-          animationDuration: '22s', animationDelay: '-6s',
-        }} />
-        <div className="blob" style={{
-          width: 300, height: 300, top: '42%', left: '42%',
-          background: 'radial-gradient(circle, rgba(52,211,153,0.08) 0%, transparent 70%)',
-          animationDuration: '26s', animationDelay: '-12s',
-        }} />
-      </div>
-
       {/* Sidebar */}
       <aside className="glass-strong w-60 flex flex-col shrink-0 sticky top-0 h-screen z-10">
         {/* Logo */}
