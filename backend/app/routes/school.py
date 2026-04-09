@@ -2,6 +2,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from flask import Blueprint, request, jsonify, g, current_app
+from sqlalchemy import update, or_
 
 from app.extensions import db
 from app.models.school import School
@@ -78,11 +79,22 @@ def trigger_recommendation():
     if not profile:
         return jsonify({'error': 'Profile not found'}), 404
 
-    if profile.recommendation_status == 'pending':
-        return jsonify({'status': 'pending', 'message': '推荐正在生成中，请稍候'})
-
-    profile.recommendation_status = 'pending'
+    # 原子 UPDATE：仅当 status 不为 pending 时才更新，防止双击竞态
+    result = db.session.execute(
+        update(UserProfile)
+        .where(
+            UserProfile.user_id == str(g.user.id),
+            or_(
+                UserProfile.recommendation_status.is_(None),
+                UserProfile.recommendation_status != 'pending',
+            ),
+        )
+        .values(recommendation_status='pending')
+    )
     db.session.commit()
+
+    if result.rowcount == 0:
+        return jsonify({'status': 'pending', 'message': '推荐正在生成中，请稍候'})
 
     app = current_app._get_current_object()
     _executor.submit(_background_recommend, app, str(g.user.id))
@@ -121,6 +133,9 @@ def get_recommendations_route():
 
     if not profile.recommendation_cache:
         return jsonify({'error': '尚未生成推荐，请先点击生成'}), 404
+
+    if profile.recommendation_status == 'pending':
+        return jsonify({'error': '推荐正在生成中'}), 202
 
     return jsonify(profile.recommendation_cache)
 

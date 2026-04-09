@@ -51,6 +51,13 @@ export default function RecommendationsPage() {
     }
   }, [])
 
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }, [])
+
   const checkStatus = useCallback(async (showPopupOnDone = false) => {
     try {
       const r = await getRecommendationStatus()
@@ -71,21 +78,14 @@ export default function RecommendationsPage() {
       setStatus('failed')
       stopPolling()
     }
-  }, [loadResults]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const stopPolling = () => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
-  }
+  }, [loadResults, stopPolling])
 
   const startPolling = useCallback(() => {
     stopPolling()
     pollRef.current = setInterval(() => {
       checkStatus(false)
     }, POLL_INTERVAL)
-  }, [checkStatus])
+  }, [checkStatus, stopPolling])
 
   // 初始化：检查当前状态
   useEffect(() => {
@@ -98,10 +98,8 @@ export default function RecommendationsPage() {
     if (status === 'pending') {
       startPolling()
     }
-    return () => {
-      if (status !== 'pending') stopPolling()
-    }
-  }, [status, startPolling])
+    return stopPolling
+  }, [status, startPolling, stopPolling])
 
   const handleTrigger = async () => {
     setTriggering(true)
@@ -276,8 +274,12 @@ function RecommendationGrid({
                         </p>
                       </div>
                       <div className="flex items-center gap-1 text-amber-500 shrink-0 ml-2">
-                        <Star size={12} fill="currentColor" />
-                        <span className="text-xs font-medium tabular-nums">{school.match_score}</span>
+                        {school.match_score != null && (
+                          <>
+                            <Star size={12} fill="currentColor" />
+                            <span className="text-xs font-medium tabular-nums">{school.match_score}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="flex justify-between items-center mt-3">
