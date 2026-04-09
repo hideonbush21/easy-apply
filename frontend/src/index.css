@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: "Plus Jakarta Sans", sans-serif;
-  --font-body: "DM Sans", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-display: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-body: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   /* Primary — Teal/Green (matching landing page #1dd3b0) */
   --color-primary-50:  #e6faf6;
