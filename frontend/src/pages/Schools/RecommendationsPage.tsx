@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { getProfileBasedRecommendation, type RecommendedSchool, type RecommendedProgram } from '@/api/schools'
 import { Sparkles, RefreshCw, ChevronDown, ChevronUp, ExternalLink, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
@@ -15,6 +15,7 @@ const MATCH_LEVEL_LABEL: Record<string, string> = {
 }
 
 export default function RecommendationsPage() {
+  const location = useLocation()
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ schools: RecommendedSchool[]; match_level: string; total_cases_found: number; category: string | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -35,6 +36,13 @@ export default function RecommendationsPage() {
       setLoading(false)
     }
   }
+
+  // 从档案页跳转时自动触发生成
+  useEffect(() => {
+    if ((location.state as { autoGenerate?: boolean })?.autoGenerate) {
+      handleGenerate()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleExpand = (idx: number) => {
     setExpanded(prev => {

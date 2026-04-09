@@ -346,7 +346,7 @@ export default function ProfilePage() {
                   } finally {
                     setSaving(false)
                   }
-                  navigate('/dashboard/schools/recommendations')
+                  navigate('/dashboard/schools/recommendations', { state: { autoGenerate: true } })
                 }}
                 style={{
                   marginLeft: 'auto',
