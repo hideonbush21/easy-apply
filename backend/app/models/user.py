@@ -67,6 +67,7 @@ class UserProfile(db.Model):
     completion_rate = db.Column(Numeric(5, 2), default=0)
     recommendation_cache = db.Column(JSONB)
     recommendation_hash = db.Column(db.String(64))
+    recommendation_status = db.Column(db.String(20))  # None | 'pending' | 'done' | 'failed'
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def calculate_completion_rate(self):
