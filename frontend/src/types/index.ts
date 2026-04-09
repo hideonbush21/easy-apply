@@ -45,11 +45,14 @@ export interface School {
   name_cn: string | null
   country: string
   ranking: number | null
-  majors: string[]
-  gpa_requirement: { min: number; preferred: number }
-  language_requirement: { toefl?: number; ielts?: number }
+  majors: string[] | null
+  gpa_requirement: { min: number; preferred: number } | null
   application_deadline: string | null
   description: string | null
+  // aggregated from programs
+  ielts_min: number | null
+  deadline_earliest: string | null
+  programs_count: number
   match_score?: number
 }
 

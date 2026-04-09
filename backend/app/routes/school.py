@@ -3,9 +3,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 from flask import Blueprint, request, jsonify, g, current_app
 from sqlalchemy import update, or_
+from sqlalchemy.orm import selectinload
 
 from app.extensions import db
 from app.models.school import School
+from app.models.program import Program
 from app.models.user import UserProfile
 from app.services.school_recommendation import get_recommendations, build_recommendation_hash
 from app.utils.decorators import login_required
@@ -51,7 +53,7 @@ def list_schools():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 20, type=int), 100)
 
-    query = School.query
+    query = School.query.options(selectinload(School.programs))
     if country:
         query = query.filter(School.country == country)
     if ranking_max:
@@ -62,8 +64,32 @@ def list_schools():
     query = query.order_by(School.ranking.asc().nullslast())
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
+    def _enrich(school: School) -> dict:
+        d = school.to_dict()
+        programs = school.programs or []
+        d['programs_count'] = len(programs)
+
+        ielts_totals = [
+            float(p.ielts_requirement['total'])
+            for p in programs
+            if p.ielts_requirement and p.ielts_requirement.get('total') is not None
+        ]
+        d['ielts_min'] = min(ielts_totals) if ielts_totals else None
+
+        deadlines = [p.deadline_26fall for p in programs if p.deadline_26fall]
+        d['deadline_earliest'] = min(deadlines).isoformat() if deadlines else None
+
+        # 学校简介：优先用学校层级，否则取第一个有内容的专业描述
+        if not d.get('description'):
+            for p in programs:
+                if p.description:
+                    d['description'] = p.description
+                    break
+
+        return d
+
     return jsonify({
-        'schools': [s.to_dict() for s in pagination.items],
+        'schools': [_enrich(s) for s in pagination.items],
         'total': pagination.total,
         'page': page,
         'per_page': per_page,

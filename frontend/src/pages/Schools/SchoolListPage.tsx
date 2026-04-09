@@ -97,12 +97,12 @@ export default function SchoolListPage() {
           {/* Table */}
           <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
             {/* Header row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr 100px 120px 130px 72px', padding: '10px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr 90px 110px 130px 72px', padding: '10px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Trophy size={12} />排名</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><GraduationCap size={12} />学校</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={12} />国家</span>
-              <span>GPA 要求</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} />截止日期</span>
+              <span>雅思要求</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} />最早截止</span>
               <span></span>
             </div>
 
@@ -110,33 +110,46 @@ export default function SchoolListPage() {
             {filtered.map((school, i) => (
               <div
                 key={school.id}
-                style={{ display: 'grid', gridTemplateColumns: '72px 1fr 100px 120px 130px 72px', padding: '14px 20px', alignItems: 'center', borderBottom: i < filtered.length - 1 ? '1px solid #f3f4f6' : 'none', transition: 'background 0.15s' }}
+                style={{ display: 'grid', gridTemplateColumns: '72px 1fr 90px 110px 130px 72px', padding: '14px 20px', alignItems: 'start', borderBottom: i < filtered.length - 1 ? '1px solid #f3f4f6' : 'none', transition: 'background 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.background = '#f9fafb')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
-                <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-mono)', color: school.ranking && school.ranking <= 50 ? '#1dd3b0' : '#6b7280' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-mono)', color: school.ranking && school.ranking <= 50 ? '#1dd3b0' : '#6b7280', paddingTop: 2 }}>
                   {school.ranking ? `#${school.ranking}` : '—'}
                 </span>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{school.name_cn || school.name}</div>
-                  {school.name_cn && <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{school.name}</div>}
+                  {school.name_cn && <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 1 }}>{school.name}</div>}
+                  {school.description && (
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {school.description}
+                    </div>
+                  )}
+                  {school.programs_count > 0 && (
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{school.programs_count} 个专业</div>
+                  )}
                 </div>
-                <span style={{ fontSize: 13, color: '#374151' }}>{flagMap[school.country] || ''} {school.country}</span>
-                <div style={{ fontSize: 12 }}>
-                  <span style={{ color: '#374151', fontFamily: 'var(--font-mono)' }}>{school.gpa_requirement?.min ?? '—'}</span>
-                  <span style={{ color: '#9ca3af', margin: '0 4px' }}>/</span>
-                  <span style={{ color: '#1dd3b0', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{school.gpa_requirement?.preferred ?? '—'}</span>
-                  <span style={{ color: '#9ca3af', fontSize: 11, marginLeft: 3 }}>推荐</span>
+                <span style={{ fontSize: 13, color: '#374151', paddingTop: 2 }}>{flagMap[school.country] || ''} {school.country}</span>
+                <div style={{ fontSize: 12, paddingTop: 2 }}>
+                  {school.ielts_min != null ? (
+                    <span style={{ color: '#1dd3b0', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{school.ielts_min}</span>
+                  ) : (
+                    <span style={{ color: '#d1d5db' }}>—</span>
+                  )}
                 </div>
-                <span style={{ fontSize: 12, color: '#374151', fontFamily: 'var(--font-mono)' }}>{school.application_deadline || '—'}</span>
-                <Link
-                  to={`/dashboard/schools/${school.id}`}
-                  style={{ fontSize: 12, fontWeight: 600, color: '#1dd3b0', textDecoration: 'none', padding: '5px 12px', border: '1px solid #1dd3b0', borderRadius: 8, transition: 'all 0.15s', display: 'inline-block' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1dd3b0'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#1dd3b0' }}
-                >
-                  详情
-                </Link>
+                <span style={{ fontSize: 12, color: '#374151', fontFamily: 'var(--font-mono)', paddingTop: 2 }}>
+                  {school.deadline_earliest || '—'}
+                </span>
+                <div style={{ paddingTop: 2 }}>
+                  <Link
+                    to={`/dashboard/schools/${school.id}`}
+                    style={{ fontSize: 12, fontWeight: 600, color: '#1dd3b0', textDecoration: 'none', padding: '5px 12px', border: '1px solid #1dd3b0', borderRadius: 8, transition: 'all 0.15s', display: 'inline-block' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1dd3b0'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#1dd3b0' }}
+                  >
+                    详情
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
