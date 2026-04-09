@@ -1,38 +1,122 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { getRecommendations } from '@/api/schools'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  getRecommendations,
+  getRecommendationStatus,
+  triggerRecommendation,
+  type RecommendationStatus,
+} from '@/api/schools'
 import { createApplication } from '@/api/applications'
 import type { School } from '@/types'
-import { Star, Plus, ArrowLeft, AlertTriangle } from 'lucide-react'
+import { Plus, RefreshCw, Sparkles, Star } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Modal } from '@/components/ui/Modal'
+import { Spinner } from '@/components/ui/Spinner'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 type Category = 'reach' | 'match' | 'safety'
 
 const CATEGORY_CONFIG: Record<Category, {
-  label: string; desc: string; priority: string
-  bg: string; border: string; badgeColor: string; badgeBg: string
+  label: string
+  headerCls: string
+  badgeVariant: 'danger' | 'primary' | 'success'
+  desc: string
+  priority: string
 }> = {
-  reach:  { label: '冲刺', desc: '匹配度 50-70%，有挑战性', priority: '冲刺', bg: '#fff1f2', border: '#fecdd3', badgeColor: '#e11d48', badgeBg: '#fff1f2' },
-  match:  { label: '匹配', desc: '匹配度 70-85%，较为合适', priority: '匹配', bg: '#f5f3ff', border: '#ddd6fe', badgeColor: '#7c3aed', badgeBg: '#f5f3ff' },
-  safety: { label: '保底', desc: '匹配度 >85%，把握较大',  priority: '保底', bg: '#e6faf6', border: '#a7f3d0', badgeColor: '#059669', badgeBg: '#e6faf6' },
+  reach:  { label: '冲刺', headerCls: 'bg-rose-500/10 border-rose-500/20',     badgeVariant: 'danger',  desc: '匹配度 50-70%，有挑战性', priority: '冲刺' },
+  match:  { label: '匹配', headerCls: 'bg-violet-500/10 border-violet-500/20', badgeVariant: 'primary', desc: '匹配度 70-85%，较为合适', priority: '匹配' },
+  safety: { label: '保底', headerCls: 'bg-emerald-500/10 border-emerald-500/20', badgeVariant: 'success', desc: '匹配度 >85%，把握较大', priority: '保底' },
 }
 
-export default function RecommendationsPage() {
-  const navigate = useNavigate()
-  const [data, setData]     = useState<Record<Category, School[]> | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError]   = useState('')
-  const [added, setAdded]   = useState<Set<string>>(new Set())
-  const [adding, setAdding] = useState<string | null>(null)
+const POLL_INTERVAL = 3000
 
-  useEffect(() => {
-    getRecommendations()
-      .then(r => setData(r.data))
-      .catch(err => setError(err.response?.data?.error || '获取推荐失败'))
-      .finally(() => setLoading(false))
+export default function RecommendationsPage() {
+  const [status, setStatus] = useState<RecommendationStatus | 'checking'>('checking')
+  const [data, setData] = useState<Record<Category, School[]> | null>(null)
+  const [added, setAdded] = useState<Set<string>>(new Set())
+  const [triggering, setTriggering] = useState(false)
+  const [showNotification, setShowNotification] = useState(false)
+
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const prevStatusRef = useRef<RecommendationStatus | null>(null)
+
+  const loadResults = useCallback(async () => {
+    try {
+      const r = await getRecommendations()
+      setData(r.data)
+    } catch {
+      // cache missing — status will handle display
+    }
   }, [])
 
+  const checkStatus = useCallback(async (showPopupOnDone = false) => {
+    try {
+      const r = await getRecommendationStatus()
+      const s = r.data.status
+      setStatus(s)
+
+      if (s === 'done') {
+        if (showPopupOnDone || prevStatusRef.current === 'pending') {
+          setShowNotification(true)
+        }
+        prevStatusRef.current = s
+        await loadResults()
+        stopPolling()
+      } else {
+        prevStatusRef.current = s
+      }
+    } catch {
+      setStatus('failed')
+      stopPolling()
+    }
+  }, [loadResults]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }
+
+  const startPolling = useCallback(() => {
+    stopPolling()
+    pollRef.current = setInterval(() => {
+      checkStatus(false)
+    }, POLL_INTERVAL)
+  }, [checkStatus])
+
+  // 初始化：检查当前状态
+  useEffect(() => {
+    checkStatus(false)
+    return stopPolling
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 当状态变为 pending 时自动开始轮询
+  useEffect(() => {
+    if (status === 'pending') {
+      startPolling()
+    }
+    return () => {
+      if (status !== 'pending') stopPolling()
+    }
+  }, [status, startPolling])
+
+  const handleTrigger = async () => {
+    setTriggering(true)
+    try {
+      await triggerRecommendation()
+      setStatus('pending')
+      prevStatusRef.current = 'pending'
+    } catch {
+      // ignore — status stays as-is
+    } finally {
+      setTriggering(false)
+    }
+  }
+
   const handleAdd = async (school: School, cat: Category) => {
-    setAdding(school.id)
     try {
       await createApplication({
         school_id: school.id,
@@ -41,129 +125,186 @@ export default function RecommendationsPage() {
       })
       setAdded(prev => new Set([...prev, school.id]))
     } catch {
-      alert('添加失败，请重试')
-    } finally {
-      setAdding(null)
+      alert('添加失败')
     }
   }
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 10 }}>
-      <div style={{ width: 28, height: 28, border: '3px solid #e5e7eb', borderTopColor: '#1dd3b0', borderRadius: '50%', animation: 'rec-spin 0.9s linear infinite' }} />
-      <span style={{ fontSize: 14, color: '#6b7280' }}>正在计算推荐…</span>
-      <style>{`@keyframes rec-spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  )
+  // ── 状态渲染 ──────────────────────────────────────────────────────────────
 
+  if (status === 'checking') {
+    return (
+      <div className="flex items-center justify-center py-20 gap-2 text-slate-400">
+        <Spinner /> <span className="text-sm">加载中...</span>
+      </div>
+    )
+  }
+
+  if (status === 'pending') {
+    return (
+      <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-white">智能推荐</h2>
+          <p className="text-slate-400 text-sm mt-1">根据你的档案信息，为你推荐合适的院校</p>
+        </div>
+        <div className="flex flex-col items-center justify-center py-24 gap-4 text-slate-400">
+          <Spinner />
+          <p className="text-sm">AI 正在分析你的档案，生成选校推荐…</p>
+          <p className="text-xs text-slate-500">可先去其他页面操作，完成后会有弹窗通知</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'none' || status === 'failed') {
+    return (
+      <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-white">智能推荐</h2>
+          <p className="text-slate-400 text-sm mt-1">根据你的档案信息，为你推荐合适的院校</p>
+        </div>
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <Sparkles size={40} className="text-violet-400" />
+          <p className="text-slate-300 font-medium">
+            {status === 'failed' ? '上次推荐生成失败，请重试' : '还未生成选校推荐'}
+          </p>
+          <p className="text-xs text-slate-500">点击按钮后将在后台生成，不影响你继续使用</p>
+          <Button
+            onClick={handleTrigger}
+            disabled={triggering}
+            className="mt-2"
+          >
+            {triggering ? <Spinner /> : <Sparkles size={15} />}
+            {triggering ? '正在启动…' : '生成选校推荐'}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'stale') {
+    return (
+      <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white">智能推荐</h2>
+            <p className="text-slate-400 text-sm mt-1">根据你的档案信息，为你推荐合适的院校</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={handleTrigger} disabled={triggering}>
+            {triggering ? <Spinner /> : <RefreshCw size={13} />}
+            重新生成
+          </Button>
+        </div>
+        <div className="mb-5 px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-sm text-amber-300">
+          档案信息已更新，以下结果基于旧档案。点击「重新生成」获取最新推荐。
+        </div>
+        <RecommendationGrid data={data} added={added} onAdd={handleAdd} />
+      </div>
+    )
+  }
+
+  // status === 'done'
   return (
-    <div style={{ padding: '28px 32px', animation: 'fade-in 0.3s ease-out' }}>
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#111827', fontFamily: 'var(--font-display)', marginBottom: 6 }}>智能推荐</h2>
-        <p style={{ fontSize: 13, color: '#6b7280' }}>根据你的档案信息，为你推荐合适的院校</p>
+    <>
+      <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white">智能推荐</h2>
+            <p className="text-slate-400 text-sm mt-1">根据你的档案信息，为你推荐合适的院校</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={handleTrigger} disabled={triggering}>
+            {triggering ? <Spinner /> : <RefreshCw size={13} />}
+            重新生成
+          </Button>
+        </div>
+        <RecommendationGrid data={data} added={added} onAdd={handleAdd} />
       </div>
 
-      {/* Error / incomplete profile prompt */}
-      {error && (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 20, padding: '14px 16px', background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 12 }}>
-          <AlertTriangle size={16} style={{ color: '#d97706', flexShrink: 0, marginTop: 1 }} />
-          <div>
-            <p style={{ fontSize: 13, color: '#92400e', fontWeight: 600, marginBottom: 4 }}>需要完善档案信息</p>
-            <p style={{ fontSize: 12, color: '#b45309' }}>{error}。请补充 GPA、目标国家、目标专业后再生成推荐。</p>
-            <button
-              onClick={() => navigate('/dashboard/profile')}
-              style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#d97706', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-              <ArrowLeft size={12} /> 前往完善档案
-            </button>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={showNotification}
+        onClose={() => setShowNotification(false)}
+        title="选校推荐已生成 🎉"
+        size="sm"
+        footer={
+          <Button onClick={() => setShowNotification(false)}>查看推荐结果</Button>
+        }
+      >
+        <p className="text-sm text-slate-300">
+          AI 已根据你的档案完成选校推荐，包含冲刺、匹配、保底三类院校，快去看看吧！
+        </p>
+      </Modal>
+    </>
+  )
+}
 
-      {/* 3-column grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
-        {(['reach', 'match', 'safety'] as Category[]).map(cat => {
-          const cfg = CATEGORY_CONFIG[cat]
-          const schools = data?.[cat] || []
-          return (
-            <div key={cat}>
-              {/* Column header */}
-              <div style={{ background: cfg.bg, border: `1.5px solid ${cfg.border}`, borderRadius: 12, padding: '14px 16px', marginBottom: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: cfg.badgeColor, background: cfg.badgeBg, border: `1px solid ${cfg.border}`, padding: '3px 10px', borderRadius: 999 }}>
-                    {cfg.label}
-                  </span>
-                  <span style={{ fontSize: 11, color: '#9ca3af' }}>{schools.length} 所</span>
-                </div>
-                <p style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{cfg.desc}</p>
+// ── 推荐列表子组件 ────────────────────────────────────────────────────────────
+
+function RecommendationGrid({
+  data,
+  added,
+  onAdd,
+}: {
+  data: Record<Category, School[]> | null
+  added: Set<string>
+  onAdd: (school: School, cat: Category) => void
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-5">
+      {(['reach', 'match', 'safety'] as Category[]).map(cat => {
+        const config = CATEGORY_CONFIG[cat]
+        const schools = data?.[cat] || []
+        return (
+          <div key={cat}>
+            <div className={`rounded-xl border p-4 mb-3 ${config.headerCls}`}>
+              <div className="flex items-center justify-between">
+                <Badge variant={config.badgeVariant}>{config.label}</Badge>
+                <span className="text-xs text-slate-500 tabular-nums">{schools.length} 所</span>
               </div>
+              <p className="text-xs text-slate-500 mt-1.5">{config.desc}</p>
+            </div>
 
-              {/* School cards */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {schools.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '28px 0', fontSize: 13, color: '#9ca3af', background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 12 }}>
-                    暂无推荐
-                  </div>
-                ) : (
-                  schools.map(school => (
-                    <div key={school.id} style={{
-                      background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 12,
-                      padding: '14px 16px', transition: 'border-color 0.15s, box-shadow 0.15s',
-                    }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#1dd3b0'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(29,211,176,0.1)' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
-                    >
-                      {/* School info */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                        <div>
-                          <p style={{ fontSize: 14, fontWeight: 600, color: '#111827', marginBottom: 3 }}>
-                            {school.name_cn || school.name}
-                          </p>
-                          <p style={{ fontSize: 12, color: '#6b7280' }}>
-                            {school.country} · <span style={{ fontFamily: 'var(--font-mono)' }}>#{school.ranking}</span>
-                          </p>
-                        </div>
-                        {school.match_score != null && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: 8 }}>
-                            <Star size={13} fill="#f59e0b" color="#f59e0b" />
-                            <span style={{ fontSize: 12, fontWeight: 700, color: '#d97706', fontFamily: 'var(--font-mono)' }}>
-                              {school.match_score}
-                            </span>
-                          </div>
-                        )}
+            <div className="space-y-3">
+              {schools.length === 0 ? (
+                <EmptyState title="暂无推荐" className="py-8" />
+              ) : (
+                schools.map(school => (
+                  <Card key={school.id} className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-medium text-white text-sm">{school.name_cn || school.name}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {school.country} · <span className="tabular-nums">#{school.ranking}</span>
+                        </p>
                       </div>
-
-                      {/* Actions */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid #f3f4f6' }}>
-                        <Link
-                          to={`/dashboard/schools/${school.id}`}
-                          style={{ fontSize: 12, fontWeight: 600, color: '#1dd3b0', textDecoration: 'none' }}
-                        >
-                          查看详情 →
-                        </Link>
-                        <button
-                          disabled={added.has(school.id) || adding === school.id}
-                          onClick={() => handleAdd(school, cat)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 5,
-                            padding: '6px 14px', borderRadius: 8, border: 'none',
-                            fontSize: 12, fontWeight: 600, cursor: added.has(school.id) ? 'default' : 'pointer',
-                            background: added.has(school.id) ? '#f3f4f6' : 'linear-gradient(135deg,#1dd3b0,#10b981)',
-                            color: added.has(school.id) ? '#9ca3af' : '#fff',
-                            transition: 'all 0.15s',
-                          }}
-                        >
-                          <Plus size={11} />
-                          {added.has(school.id) ? '已添加' : adding === school.id ? '添加中…' : '加入申请'}
-                        </button>
+                      <div className="flex items-center gap-1 text-amber-500 shrink-0 ml-2">
+                        <Star size={12} fill="currentColor" />
+                        <span className="text-xs font-medium tabular-nums">{school.match_score}</span>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                    <div className="flex justify-between items-center mt-3">
+                      <Link
+                        to={`/schools/${school.id}`}
+                        className="text-xs font-medium text-violet-400 hover:text-violet-300"
+                      >
+                        查看详情
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant={added.has(school.id) ? 'secondary' : 'primary'}
+                        onClick={() => onAdd(school, cat)}
+                        disabled={added.has(school.id)}
+                        className="text-xs"
+                      >
+                        <Plus size={11} />
+                        {added.has(school.id) ? '已添加' : '申请'}
+                      </Button>
+                    </div>
+                  </Card>
+                ))
+              )}
             </div>
-          )
-        })}
-      </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
