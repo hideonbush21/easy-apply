@@ -35,7 +35,7 @@ const DEGREE_TYPES = [
   { value: 'bachelor', label: '本科' },
 ]
 
-const COUNTRIES = ['英国', '美国', '澳大利亚']
+const COUNTRIES = ['英国', '澳大利亚', '中国香港', '新加坡', '中国澳门']
 
 const MAJORS_LIST = [
   '计算机科学', '软件工程', '人工智能', '数据科学', '网络安全',

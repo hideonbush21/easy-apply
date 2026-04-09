@@ -89,25 +89,37 @@ def classify_school(profile: UserProfile, school: School):
 def get_recommendations(profile: UserProfile) -> dict:
     schools = School.query.order_by(School.ranking.asc().nullslast()).all()
 
-    reach, match, safety = [], [], []
+    def _classify_all(ignore_country=False):
+        reach, match, safety = [], [], []
+        for school in schools:
+            if ignore_country:
+                # 临时清空目标国家过滤
+                original = profile.target_countries
+                profile.target_countries = None
+                tier = classify_school(profile, school)
+                profile.target_countries = original
+            else:
+                tier = classify_school(profile, school)
+            if tier is None:
+                continue
+            req = school.gpa_requirement or {}
+            entry = {
+                **school.to_dict(),
+                'gpa_min': req.get('min'),
+                'gpa_preferred': req.get('preferred'),
+            }
+            if tier == 'safety':
+                safety.append(entry)
+            elif tier == 'match':
+                match.append(entry)
+            else:
+                reach.append(entry)
+        return reach, match, safety
 
-    for school in schools:
-        tier = classify_school(profile, school)
-        if tier is None:
-            continue
+    reach, match, safety = _classify_all(ignore_country=False)
 
-        req = school.gpa_requirement or {}
-        entry = {
-            **school.to_dict(),
-            'gpa_min': req.get('min'),
-            'gpa_preferred': req.get('preferred'),
-        }
-
-        if tier == 'safety':
-            safety.append(entry)
-        elif tier == 'match':
-            match.append(entry)
-        else:
-            reach.append(entry)
+    # 兜底：若目标国家在库中无数据，忽略国家限制重新推荐
+    if not reach and not match and not safety and profile.target_countries:
+        reach, match, safety = _classify_all(ignore_country=True)
 
     return {'reach': reach, 'match': match, 'safety': safety}
