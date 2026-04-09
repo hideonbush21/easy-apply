@@ -185,15 +185,16 @@ export default function ProfilePage() {
                   placeholder="3.50"
                   className="flex-1"
                 />
-                <Input
+                <Select
                   label="满分"
-                  type="number"
-                  step="0.1"
-                  value={form.gpa_scale ?? ''}
-                  onChange={e => setForm(f => ({ ...f, gpa_scale: e.target.value ? Number(e.target.value) : null }))}
-                  placeholder="4.0"
+                  value={form.gpa_scale?.toString() ?? '4'}
+                  onChange={e => setForm(f => ({ ...f, gpa_scale: Number(e.target.value) }))}
                   className="flex-1"
-                />
+                >
+                  <option value="4">4.0</option>
+                  <option value="5">5.0</option>
+                  <option value="100">100</option>
+                </Select>
               </div>
               <Input
                 label="托福成绩 (TOEFL)"
