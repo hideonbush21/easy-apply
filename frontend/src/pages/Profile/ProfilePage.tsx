@@ -74,6 +74,11 @@ export default function ProfilePage() {
   }, [])
 
   const handleSave = async () => {
+    // GPA 不能高于满分
+    if (form.gpa != null && form.gpa_scale != null && form.gpa > form.gpa_scale) {
+      alert(`GPA 不能高于满分（${form.gpa_scale}）`)
+      return
+    }
     setSaving(true)
     try {
       const res = await updateProfile(form)
@@ -179,7 +184,7 @@ export default function ProfilePage() {
                   type="number"
                   step="0.01"
                   min="0"
-                  max="4.3"
+                  max={form.gpa_scale ?? 4}
                   value={form.gpa ?? ''}
                   onChange={e => setForm(f => ({ ...f, gpa: e.target.value ? Number(e.target.value) : null }))}
                   placeholder="3.50"

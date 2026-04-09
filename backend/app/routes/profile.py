@@ -39,6 +39,12 @@ def update_profile():
         if field in data:
             setattr(profile, field, data[field])
 
+    # GPA 不能高于满分
+    gpa = float(profile.gpa) if profile.gpa is not None else None
+    gpa_scale = float(profile.gpa_scale) if profile.gpa_scale is not None else None
+    if gpa is not None and gpa_scale is not None and gpa > gpa_scale:
+        return jsonify({'error': f'GPA（{gpa}）不能高于满分（{gpa_scale}）'}), 400
+
     if RECOMMENDATION_FIELDS & data.keys():
         profile.recommendation_cache = None
         profile.recommendation_hash = None
