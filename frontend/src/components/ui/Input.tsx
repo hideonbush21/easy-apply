@@ -2,7 +2,7 @@ import { forwardRef } from 'react'
 import { cn } from './cn'
 
 const baseInputCls =
-  'w-full rounded-xl border bg-white/5 text-sm text-white placeholder:text-slate-500 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500/50 disabled:opacity-40 disabled:cursor-not-allowed border-white/10'
+  'w-full rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 disabled:opacity-40 disabled:cursor-not-allowed'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
@@ -15,17 +15,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-1.5">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-slate-300">
+          <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">
             {label}
           </label>
         )}
         <input
           ref={ref}
           id={inputId}
-          className={cn(baseInputCls, 'px-3.5 py-2.5', error && 'border-rose-500/50 focus:ring-rose-500/30 focus:border-rose-500/50', className)}
+          className={cn(baseInputCls, 'px-3.5 py-2.5', error && 'border-red-400 focus:ring-red-400/20 focus:border-red-400', className)}
           {...props}
         />
-        {error && <p className="text-xs text-rose-400">{error}</p>}
+        {error && <p className="text-xs text-red-500">{error}</p>}
       </div>
     )
   }
@@ -43,17 +43,17 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="space-y-1.5">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-slate-300">
+          <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">
             {label}
           </label>
         )}
         <textarea
           ref={ref}
           id={inputId}
-          className={cn(baseInputCls, 'px-3.5 py-2.5 resize-none', error && 'border-rose-500/50', className)}
+          className={cn(baseInputCls, 'px-3.5 py-2.5 resize-none', error && 'border-red-400', className)}
           {...props}
         />
-        {error && <p className="text-xs text-rose-400">{error}</p>}
+        {error && <p className="text-xs text-red-500">{error}</p>}
       </div>
     )
   }
@@ -71,20 +71,19 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="space-y-1.5">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-slate-300">
+          <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">
             {label}
           </label>
         )}
         <select
           ref={ref}
           id={inputId}
-          className={cn(baseInputCls, 'px-3.5 py-2.5 cursor-pointer', error && 'border-rose-500/50', className)}
-          style={{ colorScheme: 'dark' }}
+          className={cn(baseInputCls, 'px-3.5 py-2.5 cursor-pointer', error && 'border-red-400', className)}
           {...props}
         >
           {children}
         </select>
-        {error && <p className="text-xs text-rose-400">{error}</p>}
+        {error && <p className="text-xs text-red-500">{error}</p>}
       </div>
     )
   }

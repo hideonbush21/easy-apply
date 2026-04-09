@@ -106,7 +106,7 @@ export default function ProfilePage() {
   const completion = profile?.completion_rate ?? 0
 
   if (loading) return (
-    <div className="flex items-center justify-center py-24 gap-2 text-slate-400">
+    <div className="flex items-center justify-center py-24 gap-2" style={{ color: '#6b7280' }}>
       <Spinner /> <span className="text-sm">加载中...</span>
     </div>
   )
@@ -114,10 +114,10 @@ export default function ProfilePage() {
   return (
     <div className="p-8 max-w-3xl" style={{ animation: 'fade-in 0.3s ease-out' }}>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white">我的档案</h2>
+        <h2 className="text-2xl font-bold" style={{ color: '#111827' }}>我的档案</h2>
         <div className="flex items-center gap-3 mt-3">
           <ProgressBar value={completion} className="flex-1" />
-          <span className="text-sm font-medium text-slate-500 tabular-nums shrink-0">{Math.round(completion)}% 完整</span>
+          <span className="text-sm font-medium tabular-nums shrink-0" style={{ color: '#6b7280' }}>{Math.round(completion)}% 完整</span>
         </div>
       </div>
 
@@ -214,7 +214,7 @@ export default function ProfilePage() {
           {activeTab === '目标' && (
             <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-slate-200 mb-2">目标国家</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#374151' }}>目标国家</label>
                 <div className="flex gap-3 flex-wrap">
                   {COUNTRIES.map(c => {
                     const selected = (form.target_countries || []).includes(c)
@@ -229,11 +229,13 @@ export default function ProfilePage() {
                             target_countries: selected ? cur.filter(x => x !== c) : [...cur, c]
                           }))
                         }}
-                        className={`px-4 py-1.5 rounded-full text-sm border transition-all duration-150 cursor-pointer ${
-                          selected
-                            ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-                            : 'border-white/20 text-slate-300 hover:border-violet-400 hover:text-violet-400'
-                        }`}
+                        style={{
+                          padding: '6px 16px', borderRadius: 999, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
+                          background: selected ? '#1dd3b0' : '#fff',
+                          color: selected ? '#fff' : '#374151',
+                          border: selected ? '1.5px solid #1dd3b0' : '1.5px solid #e5e7eb',
+                          fontWeight: selected ? 600 : 400,
+                        }}
                       >
                         {c}
                       </button>

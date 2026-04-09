@@ -10,7 +10,7 @@ interface TabsProps {
 export function Tabs({ tabs, active, onChange, className }: TabsProps) {
   return (
     <div className={cn('inline-flex rounded-xl p-1 gap-0.5', className)}
-      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      style={{ background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
       {tabs.map(tab => (
         <button
           key={tab.key}
@@ -19,10 +19,11 @@ export function Tabs({ tabs, active, onChange, className }: TabsProps) {
             'px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer',
             active === tab.key
               ? 'text-white shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              : 'text-gray-500 hover:text-gray-800 hover:bg-white'
           )}
           style={active === tab.key ? {
-            background: 'linear-gradient(135deg, rgba(124,58,237,0.6) 0%, rgba(14,165,233,0.6) 100%)',
+            background: 'linear-gradient(135deg, #1dd3b0 0%, #10b981 100%)',
+            boxShadow: '0 2px 8px rgba(29,211,176,0.3)',
           } : {}}
         >
           {tab.label}
