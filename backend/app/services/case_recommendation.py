@@ -106,20 +106,30 @@ def _get_top_schools(cases: list[AdmissionCase], top_n: int) -> list[dict]:
             gpa_sum[key] += float(c.gpa)
             gpa_cnt[key] += 1
 
-    # 查 schools 表匹配（按英文名精确 + 模糊）
+    # 查 schools 表匹配：精确匹配 + 去掉"The "前缀 + 去掉括号内容的模糊匹配
+    import re
+
+    def _normalize(name: str) -> str:
+        name = name.lower().strip()
+        name = re.sub(r'\s*\([^)]*\)', '', name)  # 去括号内容
+        name = re.sub(r',.*$', '', name)           # 去逗号后内容
+        name = re.sub(r'^the\s+', '', name)        # 去开头 The
+        return name.strip()
+
     school_db_map: dict[str, School] = {}
     school_objs = School.query.all()
     for s in school_objs:
         school_db_map[s.name] = s
+        school_db_map[_normalize(s.name)] = s
         if s.name_cn:
             school_db_map[s.name_cn] = s
 
     results = []
     for name, count in counter.most_common(top_n):
-        school_obj = school_db_map.get(name)
+        school_obj = school_db_map.get(name) or school_db_map.get(_normalize(name))
         results.append({
             "school_name_en": name,
-            "school_name_cn": school_db_map.get(name, {}) and getattr(school_db_map.get(name), "name_cn", None),
+            "school_name_cn": school_obj.name_cn if school_obj else None,
             "count": count,
             "avg_gpa": round(gpa_sum[name] / gpa_cnt[name], 2) if gpa_cnt[name] else None,
             "school_obj": school_obj,
