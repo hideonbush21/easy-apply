@@ -81,6 +81,8 @@ export default function ProfilePage() {
       setForm(res.data)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
+    } catch {
+      alert('保存失败，请稍后重试')
     } finally {
       setSaving(false)
     }

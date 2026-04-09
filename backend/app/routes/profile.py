@@ -13,7 +13,10 @@ profile_bp.strict_slashes = False
 def get_profile():
     profile = g.user.profile
     if not profile:
-        return jsonify({'error': 'Profile not found'}), 404
+        # 老用户兼容：自动创建 profile
+        profile = UserProfile(user_id=g.user.id)
+        db.session.add(profile)
+        db.session.commit()
     return jsonify(profile.to_dict())
 
 
@@ -22,7 +25,9 @@ def get_profile():
 def update_profile():
     profile = g.user.profile
     if not profile:
-        return jsonify({'error': 'Profile not found'}), 404
+        # 老用户兼容：自动创建 profile
+        profile = UserProfile(user_id=g.user.id)
+        db.session.add(profile)
 
     data = request.get_json(silent=True) or {}
     allowed_fields = [
