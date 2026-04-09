@@ -2,7 +2,20 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { login } from '@/api/auth'
+import { syncOnboarding } from '@/api/profile'
 import { CheckCircle, ArrowLeft } from 'lucide-react'
+
+async function _syncOnboardingIfNeeded() {
+  try {
+    const raw = sessionStorage.getItem('onboarding_data')
+    if (!raw) return
+    const data = JSON.parse(raw)
+    await syncOnboarding(data)
+    sessionStorage.removeItem('onboarding_data')
+  } catch {
+    // 静默失败，不影响登录流程
+  }
+}
 
 export default function LoginPage() {
   const [nickname, setNickname] = useState('')
@@ -20,6 +33,7 @@ export default function LoginPage() {
     try {
       const res = await login(nickname, password)
       setAuth(res.data.access_token, res.data.user)
+      await _syncOnboardingIfNeeded()
       window.location.href = '/dashboard'
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } } }

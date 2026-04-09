@@ -546,7 +546,12 @@ export default function OnboardingPage() {
           返回
         </button>
         <button className="ob-gradient-btn"
-          onClick={() => { if (canSubmit) setShowLoginModal(true) }}
+          onClick={() => {
+            if (canSubmit) {
+              sessionStorage.setItem('onboarding_data', JSON.stringify(data))
+              setShowLoginModal(true)
+            }
+          }}
           disabled={!canSubmit}
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 24px', border: 'none', color: 'white', borderRadius: 999, fontWeight: 500, cursor: canSubmit ? 'pointer' : 'not-allowed', fontSize: 14, boxShadow: canSubmit ? '0 6px 16px rgba(29,211,176,0.25)' : 'none' }}>
           生成推荐

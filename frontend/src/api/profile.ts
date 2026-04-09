@@ -21,3 +21,6 @@ export const updateExperience = (id: string, data: Partial<Experience>) =>
 
 export const deleteExperience = (id: string) =>
   api.delete(`/experiences/${id}`)
+
+export const syncOnboarding = (data: Record<string, unknown>) =>
+  api.post('/profile/onboarding', data)

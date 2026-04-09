@@ -68,6 +68,8 @@ class UserProfile(db.Model):
     recommendation_cache = db.Column(JSONB)
     recommendation_hash = db.Column(db.String(64))
     recommendation_status = db.Column(db.String(20))  # None | 'pending' | 'done' | 'failed'
+    onboarding_goals = db.Column(JSONB)    # ["智能选校推荐", "申请时间线"]
+    onboarding_stage = db.Column(db.String(20))  # 不到大三 | 大三 | 大四 | 已毕业
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def calculate_completion_rate(self):
@@ -99,5 +101,7 @@ class UserProfile(db.Model):
             'target_majors': self.target_majors,
             'degree_type': self.degree_type,
             'completion_rate': float(self.completion_rate) if self.completion_rate is not None else 0,
+            'onboarding_goals': self.onboarding_goals,
+            'onboarding_stage': self.onboarding_stage,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
