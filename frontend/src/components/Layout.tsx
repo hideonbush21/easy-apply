@@ -13,13 +13,13 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { to: '/dashboard', label: '首页', icon: LayoutDashboard },
-  { to: '/dashboard/profile', label: '我的档案', icon: User },
-  { to: '/dashboard/schools', label: '学校库', icon: School },
-  { to: '/dashboard/schools/recommendations', label: '智能推荐', icon: Sparkles },
-  { to: '/dashboard/applications', label: '申请管理', icon: FileText },
-  { to: '/dashboard/documents', label: '文书生成', icon: BookOpen },
-  { to: '/dashboard/timeline', label: '申请时间轴', icon: CalendarDays },
+  { to: '/dashboard', label: '首页', icon: LayoutDashboard, end: true },
+  { to: '/dashboard/profile', label: '我的档案', icon: User, end: false },
+  { to: '/dashboard/schools', label: '学校库', icon: School, end: true },
+  { to: '/dashboard/schools/recommendations', label: '智能推荐', icon: Sparkles, end: false },
+  { to: '/dashboard/applications', label: '申请管理', icon: FileText, end: false },
+  { to: '/dashboard/documents', label: '文书生成', icon: BookOpen, end: false },
+  { to: '/dashboard/timeline', label: '申请时间轴', icon: CalendarDays, end: false },
 ]
 
 export default function Layout() {
@@ -55,11 +55,11 @@ export default function Layout() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {navItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
-              end={to === '/dashboard'}
+              end={end}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                   isActive
