@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getApplications, updateApplication, deleteApplication } from '@/api/applications'
 import type { Application } from '@/types'
-import { Trash2, ChevronDown, FileText } from 'lucide-react'
+import { Trash2, ChevronDown, FileText, BookOpen } from 'lucide-react'
 import { Table } from '@/components/ui/Table'
 import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -33,6 +34,7 @@ export default function ApplicationListPage() {
   const [apps, setApps] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState('')
+  const navigate = useNavigate()
 
   useEffect(() => {
     getApplications()
@@ -86,28 +88,35 @@ export default function ApplicationListPage() {
         <Table>
           <Table.Header>
             <Table.Row>
-              <Table.Head>学校</Table.Head>
-              <Table.Head className="w-36">专业</Table.Head>
+              <Table.Head>学校 / 项目</Table.Head>
               <Table.Head className="w-20">优先级</Table.Head>
               <Table.Head className="w-28">截止日期</Table.Head>
               <Table.Head className="w-32">状态</Table.Head>
-              <Table.Head className="w-12"></Table.Head>
+              <Table.Head className="w-24">操作</Table.Head>
             </Table.Row>
           </Table.Header>
           <Table.Body>
             {filtered.map(app => (
               <Table.Row key={app.id}>
                 <Table.Cell>
-                  <p className="font-medium text-white">{app.school?.name_cn || app.school?.name}</p>
-                  <p className="text-xs text-slate-400 mt-0.5 tabular-nums">{app.school?.country} · #{app.school?.ranking}</p>
+                  <p className="font-medium text-white">
+                    {app.school_name_cn || app.school_name || app.school?.name_cn || app.school?.name || '-'}
+                  </p>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    {app.program_name_cn || app.program_name_en || app.major || '-'}
+                  </p>
+                  {app.department && (
+                    <p className="text-xs text-slate-500 mt-0.5">{app.department}</p>
+                  )}
                 </Table.Cell>
-                <Table.Cell className="text-slate-300">{app.major || '-'}</Table.Cell>
                 <Table.Cell>
                   <span className={`text-sm ${PRIORITY_CLS[app.priority || ''] || 'text-slate-400'}`}>
                     {app.priority || '-'}
                   </span>
                 </Table.Cell>
-                <Table.Cell className="text-slate-300 tabular-nums">{app.application_deadline || '-'}</Table.Cell>
+                <Table.Cell className="text-slate-300 tabular-nums text-xs">
+                  {app.application_deadline || '-'}
+                </Table.Cell>
                 <Table.Cell>
                   <div className="relative inline-block">
                     <select
@@ -128,12 +137,22 @@ export default function ApplicationListPage() {
                   </div>
                 </Table.Cell>
                 <Table.Cell>
-                  <button
-                    onClick={() => handleDelete(app.id)}
-                    className="text-slate-300 hover:text-danger-500 transition-colors"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigate('/dashboard/documents', { state: { application: app } })}
+                      className="text-slate-400 hover:text-violet-400 transition-colors"
+                      title="生成文书"
+                    >
+                      <BookOpen size={15} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(app.id)}
+                      className="text-slate-400 hover:text-rose-400 transition-colors"
+                      title="删除"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </Table.Cell>
               </Table.Row>
             ))}

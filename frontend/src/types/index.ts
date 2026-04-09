@@ -59,8 +59,20 @@ export interface School {
 export interface Application {
   id: string
   user_id?: string
-  school_id: string
+  school_id: string | null
   school?: School
+  program_id: string | null
+  program_name_cn: string | null
+  program_name_en: string | null
+  program_url: string | null
+  department: string | null
+  duration: string | null
+  tuition_cny: number | null
+  ielts_requirement: unknown
+  toefl_requirement: unknown
+  school_name: string | null
+  school_name_cn: string | null
+  school_ranking: number | null
   major: string | null
   status: string
   priority: string | null

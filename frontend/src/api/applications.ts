@@ -2,7 +2,8 @@ import api from './client'
 import type { Application } from '@/types'
 
 export interface CreateApplicationData {
-  school_id: string
+  program_id?: string
+  school_id?: string
   major?: string
   status?: string
   priority?: string

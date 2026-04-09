@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify, g
 from app.extensions import db
 from app.models.application import Application
 from app.models.school import School
+from app.models.program import Program
 from app.utils.decorators import login_required
 
 application_bp = Blueprint('application', __name__, url_prefix='/api/applications')
@@ -39,13 +40,27 @@ def list_applications():
 @login_required
 def create_application():
     data = request.get_json(silent=True) or {}
-    school_id = data.get('school_id', '')
-    if not school_id:
-        return jsonify({'error': 'school_id is required'}), 400
+    program_id = data.get('program_id')
+    school_id = data.get('school_id')
 
-    school = School.query.get(school_id)
-    if not school:
-        return jsonify({'error': 'School not found'}), 404
+    program = None
+    if program_id:
+        program = Program.query.get(program_id)
+        if not program:
+            return jsonify({'error': 'Program not found'}), 404
+        # 防止重复申请同一 program
+        existing = Application.query.filter_by(
+            user_id=g.user.id, program_id=program_id
+        ).first()
+        if existing:
+            return jsonify({'error': '已加入申请列表', 'application_id': str(existing.id)}), 409
+        school_id = str(program.school_id)
+    elif school_id:
+        school = School.query.get(school_id)
+        if not school:
+            return jsonify({'error': 'School not found'}), 404
+    else:
+        return jsonify({'error': 'program_id 或 school_id 必填一项'}), 400
 
     status = data.get('status', '待申请')
     if status not in VALID_STATUSES:
@@ -58,7 +73,8 @@ def create_application():
     app_obj = Application(
         user_id=g.user.id,
         school_id=school_id,
-        major=data.get('major'),
+        program_id=program_id,
+        major=data.get('major') or (program.name_cn if program else None),
         status=status,
         priority=priority,
         application_deadline=_parse_date(data.get('application_deadline')),
@@ -80,7 +96,7 @@ def update_application(app_id):
     data = request.get_json(silent=True) or {}
     if 'status' in data:
         if data['status'] not in VALID_STATUSES:
-            return jsonify({'error': f'Invalid status'}), 400
+            return jsonify({'error': 'Invalid status'}), 400
         app_obj.status = data['status']
         if data['status'] == '已提交' and not app_obj.applied_at:
             app_obj.applied_at = datetime.utcnow()

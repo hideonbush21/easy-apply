@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   getProfileBasedRecommendation,
   getMyRecommendation,
@@ -7,7 +7,8 @@ import {
   type RecommendedProgram,
   type ProfileBasedResult,
 } from '@/api/schools'
-import { Sparkles, RefreshCw, ChevronDown, ChevronUp, ExternalLink, AlertTriangle } from 'lucide-react'
+import { createApplication } from '@/api/applications'
+import { Sparkles, RefreshCw, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, Plus, Check } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -24,10 +25,13 @@ const MATCH_LEVEL_LABEL: Record<string, string> = {
 
 export default function RecommendationsPage() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [status, setStatus] = useState<PageStatus>('loading')
   const [result, setResult] = useState<ProfileBasedResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  // 已加入申请的 program_id 集合
+  const [addedPrograms, setAddedPrograms] = useState<Set<string>>(new Set())
 
   // 加载缓存结果
   const loadCached = async () => {
@@ -192,6 +196,9 @@ export default function RecommendationsPage() {
                   idx={idx}
                   expanded={expanded.has(idx)}
                   onToggle={() => toggleExpand(idx)}
+                  addedPrograms={addedPrograms}
+                  onAdd={(programId) => setAddedPrograms(prev => new Set([...prev, programId]))}
+                  onViewApplications={() => navigate('/dashboard/applications')}
                 />
               ))
             )}
@@ -202,11 +209,14 @@ export default function RecommendationsPage() {
   )
 }
 
-function SchoolCard({ school, idx, expanded, onToggle }: {
+function SchoolCard({ school, idx, expanded, onToggle, addedPrograms, onAdd, onViewApplications }: {
   school: RecommendedSchool
   idx: number
   expanded: boolean
   onToggle: () => void
+  addedPrograms: Set<string>
+  onAdd: (programId: string) => void
+  onViewApplications: () => void
 }) {
   return (
     <Card>
@@ -253,7 +263,14 @@ function SchoolCard({ school, idx, expanded, onToggle }: {
             <p className="px-5 py-4 text-sm" style={{ color: '#9ca3af' }}>暂无匹配项目数据</p>
           ) : (
             school.programs.map((prog, pi) => (
-              <ProgramRow key={prog.id} program={prog} isLast={pi === school.programs.length - 1} />
+              <ProgramRow
+                key={prog.id}
+                program={prog}
+                isLast={pi === school.programs.length - 1}
+                added={addedPrograms.has(prog.id)}
+                onAdd={onAdd}
+                onViewApplications={onViewApplications}
+              />
             ))
           )}
         </div>
@@ -262,7 +279,31 @@ function SchoolCard({ school, idx, expanded, onToggle }: {
   )
 }
 
-function ProgramRow({ program, isLast }: { program: RecommendedProgram; isLast: boolean }) {
+function ProgramRow({ program, isLast, added, onAdd, onViewApplications }: {
+  program: RecommendedProgram
+  isLast: boolean
+  added: boolean
+  onAdd: (programId: string) => void
+  onViewApplications: () => void
+}) {
+  const [adding, setAdding] = useState(false)
+
+  const handleAdd = async () => {
+    setAdding(true)
+    try {
+      await createApplication({ program_id: program.id })
+      onAdd(program.id)
+    } catch (e: unknown) {
+      const status = (e as { response?: { status?: number } })?.response?.status
+      if (status === 409) {
+        // 已存在，标记为已添加
+        onAdd(program.id)
+      }
+    } finally {
+      setAdding(false)
+    }
+  }
+
   const score = Math.round(program.similarity_score * 100)
   const ielts = program.ielts_requirement
     ? (typeof program.ielts_requirement === 'object' ? program.ielts_requirement.total : program.ielts_requirement)
@@ -301,13 +342,32 @@ function ProgramRow({ program, isLast }: { program: RecommendedProgram; isLast: 
           )}
         </div>
       </div>
-      {program.program_url && (
-        <a href={program.program_url} target="_blank" rel="noopener noreferrer"
-          className="shrink-0 flex items-center gap-1 text-xs font-medium"
-          style={{ color: '#1dd3b0' }}>
-          官网 <ExternalLink size={11} />
-        </a>
-      )}
+      {/* 右侧操作区 */}
+      <div className="shrink-0 flex items-center gap-2">
+        {program.program_url && (
+          <a href={program.program_url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs font-medium"
+            style={{ color: '#1dd3b0' }}>
+            官网 <ExternalLink size={11} />
+          </a>
+        )}
+        {added ? (
+          <button
+            onClick={onViewApplications}
+            className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg"
+            style={{ background: '#f0fdf9', color: '#059669', border: '1px solid #a7f3d0' }}>
+            <Check size={11} /> 已加入
+          </button>
+        ) : (
+          <button
+            onClick={handleAdd}
+            disabled={adding}
+            className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg"
+            style={{ background: '#1dd3b0', color: '#fff', border: 'none', cursor: adding ? 'not-allowed' : 'pointer', opacity: adding ? 0.7 : 1 }}>
+            <Plus size={11} /> {adding ? '加入中…' : '加入申请'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
