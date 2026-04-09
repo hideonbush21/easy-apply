@@ -21,14 +21,20 @@ def _get_client():
 
 
 def encode(texts: list[str]) -> np.ndarray:
-    """将文本列表编码为向量矩阵，shape=(n, dim)"""
+    """将文本列表编码为向量矩阵，shape=(n, dim)，自动分批处理"""
     client = _get_client()
-    response = client.embeddings.create(
-        model="text-embedding-3-large",
-        input=texts,
-    )
-    vectors = np.array([item.embedding for item in response.data], dtype=np.float32)
-    # 归一化，与 cosine_similarity_batch 保持一致
+    batch_size = 512  # 远低于 OpenAI 2048 上限，留足余量
+    all_vectors = []
+
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        response = client.embeddings.create(
+            model="text-embedding-3-large",
+            input=batch,
+        )
+        all_vectors.extend([item.embedding for item in response.data])
+
+    vectors = np.array(all_vectors, dtype=np.float32)
     norms = np.linalg.norm(vectors, axis=1, keepdims=True)
     return vectors / np.maximum(norms, 1e-10)
 
@@ -94,28 +100,26 @@ def find_similar_programs(
 ) -> list[dict]:
     """
     在指定学校范围内，找和 query_text 最相似的 top_k_per_school 个 program。
+    只对目标学校的 programs 做 embedding，不全量缓存。
     """
-    cache = get_programs_cache()
-    all_vectors = cache["vectors"]
-    all_ids = cache["ids"]
+    from app.models.program import Program
 
-    query_vec = encode([query_text])[0]
+    # 只查目标学校的 programs
+    school_id_strs = [str(sid) for sid in school_id_set]
+    programs = Program.query.filter(Program.school_id.in_(school_id_strs)).all()
 
-    mask = [i for i, pid in enumerate(all_ids)
-            if _get_program_school_id(pid) in school_id_set]
-
-    if not mask:
+    if not programs:
         return []
 
-    sub_vectors = all_vectors[mask]
-    sub_ids = [all_ids[i] for i in mask]
-    scores = cosine_similarity_batch(query_vec, sub_vectors)
+    texts = [_build_program_text(p) for p in programs]
+    all_vectors = encode(texts)
+    query_vec = encode([query_text])[0]
+    scores = cosine_similarity_batch(query_vec, all_vectors)
 
     from collections import defaultdict
     school_best: dict[str, list] = defaultdict(list)
-    for pid, score in zip(sub_ids, scores):
-        school_id = str(_get_program_school_id(pid))
-        school_best[school_id].append((float(score), pid))
+    for p, score in zip(programs, scores):
+        school_best[str(p.school_id)].append((float(score), p.id))
 
     results = []
     for school_id, items in school_best.items():
@@ -125,13 +129,3 @@ def find_similar_programs(
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return results
-
-
-_pid_to_sid: dict = {}
-
-def _get_program_school_id(program_id):
-    if program_id not in _pid_to_sid:
-        from app.models.program import Program
-        p = Program.query.get(program_id)
-        _pid_to_sid[program_id] = p.school_id if p else None
-    return _pid_to_sid[program_id]
