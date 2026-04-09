@@ -21,3 +21,10 @@ docu
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude Code worktrees & local config
+.claude/worktrees/
+.claude/settings.local.json
+
+# Example/prototype files
+example/
