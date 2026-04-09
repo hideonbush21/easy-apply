@@ -60,3 +60,6 @@ export const getSchool = (id: string) =>
 
 export const getProfileBasedRecommendation = (params?: { top_schools?: number; top_programs?: number }) =>
   api.post<ProfileBasedResult>('/school-recommendation/profile-based', params ?? {})
+
+export const getMyRecommendation = () =>
+  api.get<{ status: 'none' | 'fresh' | 'stale'; data?: ProfileBasedResult }>('/school-recommendation/my-result')

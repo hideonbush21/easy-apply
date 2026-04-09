@@ -1,46 +1,72 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { getProfileBasedRecommendation, type RecommendedSchool, type RecommendedProgram } from '@/api/schools'
+import {
+  getProfileBasedRecommendation,
+  getMyRecommendation,
+  type RecommendedSchool,
+  type RecommendedProgram,
+  type ProfileBasedResult,
+} from '@/api/schools'
 import { Sparkles, RefreshCw, ChevronDown, ChevronUp, ExternalLink, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 
+type PageStatus = 'loading' | 'none' | 'fresh' | 'stale' | 'generating' | 'error'
+
 const MATCH_LEVEL_LABEL: Record<string, string> = {
-  exact:       '精确匹配',
+  exact:         '精确匹配',
   'widened_0.5': '扩大匹配 (±0.5 GPA)',
   'widened_0.8': '扩大匹配 (±0.8 GPA)',
-  no_major:    '忽略专业匹配',
+  no_major:      '忽略专业匹配',
 }
 
 export default function RecommendationsPage() {
   const location = useLocation()
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<{ schools: RecommendedSchool[]; match_level: string; total_cases_found: number; category: string | null } | null>(null)
+  const [status, setStatus] = useState<PageStatus>('loading')
+  const [result, setResult] = useState<ProfileBasedResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
 
+  // 加载缓存结果
+  const loadCached = async () => {
+    try {
+      const r = await getMyRecommendation()
+      if (r.data.status === 'none') {
+        setStatus('none')
+      } else {
+        setResult(r.data.data!)
+        setExpanded(new Set((r.data.data?.schools ?? []).map((_, i) => i)))
+        setStatus(r.data.status) // 'fresh' | 'stale'
+      }
+    } catch {
+      setStatus('none')
+    }
+  }
+
+  // 生成推荐
   const handleGenerate = async () => {
-    setLoading(true)
+    setStatus('generating')
     setError(null)
     try {
       const r = await getProfileBasedRecommendation({ top_schools: 8, top_programs: 3 })
       setResult(r.data)
-      // 默认展开所有学校
       setExpanded(new Set(r.data.schools.map((_, i) => i)))
+      setStatus('fresh')
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
       setError(msg || '生成失败，请检查档案是否完整后重试')
-    } finally {
-      setLoading(false)
+      setStatus(result ? 'stale' : 'error')
     }
   }
 
-  // 从档案页跳转时自动触发生成
   useEffect(() => {
-    if ((location.state as { autoGenerate?: boolean })?.autoGenerate) {
+    const autoGenerate = (location.state as { autoGenerate?: boolean })?.autoGenerate
+    if (autoGenerate) {
       handleGenerate()
+    } else {
+      loadCached()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -52,60 +78,97 @@ export default function RecommendationsPage() {
     })
   }
 
+  // ── 渲染 ────────────────────────────────────────────────────────
+
+  if (status === 'loading') {
+    return (
+      <div className="flex items-center justify-center py-24 gap-2" style={{ color: '#6b7280' }}>
+        <Spinner /> <span className="text-sm">加载中...</span>
+      </div>
+    )
+  }
+
   return (
     <div className="p-8 max-w-4xl" style={{ animation: 'fade-in 0.3s ease-out' }}>
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-5 flex items-start justify-between">
         <div>
           <h2 className="text-2xl font-bold" style={{ color: '#111827' }}>智能推荐</h2>
           <p className="text-sm mt-1" style={{ color: '#6b7280' }}>
             基于历史录取案例 + AI 语义匹配，为你推荐最适合的院校和项目
           </p>
         </div>
-        <Button onClick={handleGenerate} disabled={loading}>
-          {loading ? <Spinner /> : result ? <RefreshCw size={14} /> : <Sparkles size={14} />}
-          {loading ? '生成中…' : result ? '重新生成' : '生成推荐'}
-        </Button>
+        {(status === 'fresh' || status === 'stale') && (
+          <Button onClick={handleGenerate}>
+            <RefreshCw size={14} />
+            重新生成
+          </Button>
+        )}
       </div>
+
+      {/* Stale banner */}
+      {status === 'stale' && (
+        <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl border"
+          style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+          <AlertTriangle size={15} style={{ color: '#d97706', marginTop: 1, flexShrink: 0 }} />
+          <div className="flex-1">
+            <p className="text-sm font-medium" style={{ color: '#92400e' }}>检测到档案已更新</p>
+            <p className="text-xs mt-0.5" style={{ color: '#b45309' }}>
+              以下推荐结果基于旧档案数据，点击「重新生成」获取最新推荐
+            </p>
+          </div>
+          <button
+            onClick={handleGenerate}
+            className="text-xs font-semibold shrink-0"
+            style={{ color: '#d97706' }}
+          >
+            重新生成 →
+          </button>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
         <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl border"
-          style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
-          <AlertTriangle size={15} style={{ color: '#d97706', marginTop: 1, flexShrink: 0 }} />
+          style={{ background: '#fff1f2', borderColor: '#fecdd3' }}>
+          <AlertTriangle size={15} style={{ color: '#e11d48', marginTop: 1, flexShrink: 0 }} />
           <div>
-            <p className="text-sm font-medium" style={{ color: '#92400e' }}>无法生成推荐</p>
-            <p className="text-xs mt-0.5" style={{ color: '#b45309' }}>{error}</p>
-            <Link to="/dashboard/profile" className="text-xs font-semibold mt-1 inline-block" style={{ color: '#d97706' }}>
+            <p className="text-sm font-medium" style={{ color: '#9f1239' }}>生成失败</p>
+            <p className="text-xs mt-0.5" style={{ color: '#be123c' }}>{error}</p>
+            <Link to="/dashboard/profile" className="text-xs font-semibold mt-1 inline-block" style={{ color: '#e11d48' }}>
               前往完善档案 →
             </Link>
           </div>
         </div>
       )}
 
-      {/* Empty state */}
-      {!result && !loading && !error && (
-        <div className="flex flex-col items-center justify-center py-24 gap-4" style={{ color: '#9ca3af' }}>
+      {/* Generating */}
+      {status === 'generating' && (
+        <div className="flex flex-col items-center justify-center py-24 gap-3" style={{ color: '#6b7280' }}>
+          <Spinner />
+          <p className="text-sm">AI 正在分析历史案例，匹配最适合你的项目…</p>
+          <p className="text-xs" style={{ color: '#9ca3af' }}>通常需要 10-20 秒</p>
+        </div>
+      )}
+
+      {/* None / Error with no data */}
+      {(status === 'none' || status === 'error') && !result && (
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
           <Sparkles size={40} style={{ color: '#1dd3b0' }} />
           <p className="text-sm font-medium" style={{ color: '#374151' }}>点击「生成推荐」开始智能选校</p>
           <p className="text-xs text-center max-w-xs" style={{ color: '#9ca3af' }}>
             系统将基于与你背景相似的历史录取案例，结合 AI 语义匹配，推荐最适合你的项目
           </p>
-        </div>
-      )}
-
-      {/* Loading */}
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-24 gap-3" style={{ color: '#6b7280' }}>
-          <Spinner />
-          <p className="text-sm">AI 正在分析历史案例，匹配最适合你的项目…</p>
+          <Button onClick={handleGenerate}>
+            <Sparkles size={14} />
+            生成推荐
+          </Button>
         </div>
       )}
 
       {/* Results */}
-      {result && !loading && (
+      {result && status !== 'generating' && (
         <>
-          {/* Meta info */}
           <div className="mb-5 flex items-center gap-3 flex-wrap">
             <Badge variant="primary">{MATCH_LEVEL_LABEL[result.match_level] ?? result.match_level}</Badge>
             <span className="text-xs" style={{ color: '#6b7280' }}>
@@ -116,7 +179,6 @@ export default function RecommendationsPage() {
             )}
           </div>
 
-          {/* School list */}
           <div className="space-y-4">
             {result.schools.length === 0 ? (
               <div className="text-center py-16 text-sm" style={{ color: '#9ca3af' }}>
@@ -148,7 +210,6 @@ function SchoolCard({ school, idx, expanded, onToggle }: {
 }) {
   return (
     <Card>
-      {/* School header */}
       <button
         className="w-full text-left px-5 py-4 flex items-center justify-between"
         onClick={onToggle}
@@ -173,7 +234,7 @@ function SchoolCard({ school, idx, expanded, onToggle }: {
             <p className="text-xs" style={{ color: '#6b7280' }}>相似案例</p>
             <p className="text-sm font-semibold" style={{ color: '#111827' }}>{school.case_count} 条</p>
           </div>
-          {school.avg_gpa && (
+          {school.avg_gpa != null && (
             <div className="text-right">
               <p className="text-xs" style={{ color: '#6b7280' }}>案例均 GPA</p>
               <p className="text-sm font-semibold" style={{ color: '#111827' }}>{school.avg_gpa}</p>
@@ -186,7 +247,6 @@ function SchoolCard({ school, idx, expanded, onToggle }: {
         </div>
       </button>
 
-      {/* Programs */}
       {expanded && (
         <div style={{ borderTop: '1px solid #f3f4f6' }}>
           {school.programs.length === 0 ? (
