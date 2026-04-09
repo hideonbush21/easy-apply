@@ -9,6 +9,16 @@ export interface SchoolFilters {
   per_page?: number
 }
 
+export interface IeltsRequirement {
+  total: number
+  sub?: number
+}
+
+export interface ToeflRequirement {
+  total: number
+  sub?: number
+}
+
 export interface RecommendedProgram {
   id: string
   name_cn: string | null
@@ -17,10 +27,11 @@ export interface RecommendedProgram {
   department: string | null
   duration: string | null
   tuition: string | null
-  tuition_cny: string | null
-  ielts_requirement: number | null
-  toefl_requirement: number | null
+  tuition_cny: number | null
+  ielts_requirement: IeltsRequirement | number | null
+  toefl_requirement: ToeflRequirement | number | null
   deadline_26fall: string | null
+  deadline_25fall: string | null
   program_url: string | null
   similarity_score: number
 }

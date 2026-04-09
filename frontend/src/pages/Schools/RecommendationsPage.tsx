@@ -196,6 +196,14 @@ function SchoolCard({ school, idx, expanded, onToggle }: {
 
 function ProgramRow({ program, isLast }: { program: RecommendedProgram; isLast: boolean }) {
   const score = Math.round(program.similarity_score * 100)
+  const ielts = program.ielts_requirement
+    ? (typeof program.ielts_requirement === 'object' ? program.ielts_requirement.total : program.ielts_requirement)
+    : null
+  const toefl = program.toefl_requirement
+    ? (typeof program.toefl_requirement === 'object' ? program.toefl_requirement.total : program.toefl_requirement)
+    : null
+  const deadline = program.deadline_26fall || program.deadline_25fall
+
   return (
     <div className="px-5 py-3.5 flex items-start justify-between gap-4"
       style={{ borderBottom: isLast ? 'none' : '1px solid #f9fafb' }}>
@@ -216,11 +224,11 @@ function ProgramRow({ program, isLast }: { program: RecommendedProgram; isLast: 
           {program.department && <span>{program.department}</span>}
           {program.duration && <span>· {program.duration}</span>}
           {program.tuition_cny && <span>· 学费约 ¥{Number(program.tuition_cny).toLocaleString()}</span>}
-          {program.ielts_requirement && <span>· 雅思 {program.ielts_requirement}</span>}
-          {program.toefl_requirement && <span>· 托福 {program.toefl_requirement}</span>}
-          {program.deadline_26fall && (
+          {ielts && <span>· 雅思 {ielts}</span>}
+          {toefl && <span>· 托福 {toefl}</span>}
+          {deadline && (
             <span style={{ color: '#d97706' }}>
-              · 截止 {new Date(program.deadline_26fall).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}
+              · 截止 {new Date(deadline).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}
             </span>
           )}
         </div>
