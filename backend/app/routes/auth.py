@@ -194,24 +194,34 @@ def send_code():
     if not email or not _EMAIL_RE.match(email):
         return jsonify({'error': '请输入有效的邮箱地址'}), 400
 
-    r = get_redis()
-
-    if r.exists(_cooldown_key(email)):
-        ttl = r.ttl(_cooldown_key(email))
-        return jsonify({'error': f'发送太频繁，请 {ttl} 秒后再试'}), 429
+    try:
+        r = get_redis()
+        if r.exists(_cooldown_key(email)):
+            ttl = r.ttl(_cooldown_key(email))
+            return jsonify({'error': f'发送太频繁，请 {ttl} 秒后再试'}), 429
+    except Exception as exc:
+        current_app.logger.error('Redis connection failed: %s', exc)
+        return jsonify({'error': f'服务暂时不可用，请稍后重试（Redis: {exc}）'}), 500
 
     code = ''.join(secrets.choice(string.digits) for _ in range(6))
-    r.setex(_otp_key(email), _OTP_TTL, code)
-    r.delete(_attempts_key(email))
-    r.setex(_cooldown_key(email), _OTP_COOLDOWN, '1')
+    try:
+        r.setex(_otp_key(email), _OTP_TTL, code)
+        r.delete(_attempts_key(email))
+        r.setex(_cooldown_key(email), _OTP_COOLDOWN, '1')
+    except Exception as exc:
+        current_app.logger.error('Redis write failed: %s', exc)
+        return jsonify({'error': f'服务暂时不可用，请稍后重试（Redis write: {exc}）'}), 500
 
     try:
         send_otp_email(email, code)
     except Exception as exc:
         current_app.logger.error('send_otp_email failed for %s: %s', email, exc)
-        r.delete(_otp_key(email))
-        r.delete(_cooldown_key(email))
-        return jsonify({'error': '邮件发送失败，请稍后重试'}), 500
+        try:
+            r.delete(_otp_key(email))
+            r.delete(_cooldown_key(email))
+        except Exception:
+            pass
+        return jsonify({'error': f'邮件发送失败，请稍后重试（{exc}）'}), 500
 
     return jsonify({'message': '验证码已发送，请查收邮件'})
 
