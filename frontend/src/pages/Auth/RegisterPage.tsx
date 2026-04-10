@@ -5,15 +5,17 @@ import { register } from '@/api/auth'
 import { syncOnboarding } from '@/api/profile'
 import { CheckCircle, ArrowLeft } from 'lucide-react'
 
-async function _syncOnboardingIfNeeded() {
+async function _syncOnboardingIfNeeded(): Promise<boolean> {
   try {
     const raw = sessionStorage.getItem('onboarding_data')
-    if (!raw) return
+    if (!raw) return false
     const data = JSON.parse(raw)
     await syncOnboarding(data)
     sessionStorage.removeItem('onboarding_data')
+    return true
   } catch {
-    // 静默失败，不影响注册流程
+    sessionStorage.removeItem('onboarding_data')
+    return false
   }
 }
 
@@ -38,8 +40,10 @@ export default function RegisterPage() {
     try {
       const res = await register(nickname, password)
       setAuth(res.data.access_token, res.data.user)
-      await _syncOnboardingIfNeeded()
-      window.location.href = '/dashboard'
+      const fromOnboarding = await _syncOnboardingIfNeeded()
+      window.location.href = fromOnboarding
+        ? '/dashboard/schools/recommendations?autoGenerate=true'
+        : '/dashboard'
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } } }
       setError(e.response?.data?.error || '注册失败，请重试')

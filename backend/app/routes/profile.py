@@ -1,8 +1,16 @@
+import re
 from flask import Blueprint, request, jsonify, g
 from app.extensions import db
 from app.models.user import UserProfile
 from app.services.school_recommendation import RECOMMENDATION_FIELDS
 from app.utils.decorators import login_required
+
+_PROG_TO_COUNTRIES = {
+    '美国硕士': ['美国'],
+    '英国硕士': ['英国'],
+    '港新硕士': ['中国香港', '新加坡'],
+    '还没决定': [],
+}
 
 profile_bp = Blueprint('profile', __name__, url_prefix='/api/profile')
 profile_bp.strict_slashes = False
@@ -109,19 +117,12 @@ def sync_onboarding():
     # direction → target_majors（按逗号/顿号拆分）
     direction = (data.get('direction') or '').strip()
     if direction:
-        import re
         majors = [m.strip() for m in re.split(r'[，,、；;]', direction) if m.strip()]
         if majors and (not profile.target_majors or profile.target_majors != majors):
             profile.target_majors = majors
 
     # programs → target_countries
     programs = data.get('programs') or []
-    _PROG_TO_COUNTRIES = {
-        '美国硕士':  ['美国'],
-        '英国硕士':  ['英国'],
-        '港新硕士':  ['中国香港', '新加坡'],
-        '还没决定':  [],
-    }
     countries = []
     for p in programs:
         countries.extend(_PROG_TO_COUNTRIES.get(p, []))

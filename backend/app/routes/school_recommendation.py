@@ -149,10 +149,12 @@ def _run_recommendation(profile, undergrad_tier, gpa, undergrad_major,
     except Exception as e:
         import traceback
         traceback.print_exc()
-        # profile-based 失败时标记 status
         if profile:
-            profile.recommendation_status = 'failed'
-            db.session.commit()
+            try:
+                profile.recommendation_status = 'failed'
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
         return jsonify({"error": f"推荐服务异常: {str(e)}"}), 500
 
     # profile-based：将结果和快照写入 DB

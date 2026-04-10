@@ -66,8 +66,9 @@ export default function RecommendationsPage() {
   }
 
   useEffect(() => {
-    const autoGenerate = (location.state as { autoGenerate?: boolean })?.autoGenerate
-    if (autoGenerate) {
+    const stateAutoGenerate = (location.state as { autoGenerate?: boolean })?.autoGenerate
+    const queryAutoGenerate = new URLSearchParams(window.location.search).get('autoGenerate') === 'true'
+    if (stateAutoGenerate || queryAutoGenerate) {
       handleGenerate()
     } else {
       loadCached()

@@ -1,5 +1,6 @@
 from datetime import datetime, date, timedelta
 from flask import Blueprint, request, jsonify, g
+from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models.application import Application
 from app.models.school import School
@@ -30,6 +31,10 @@ def list_applications():
     apps = (
         Application.query
         .filter_by(user_id=g.user.id)
+        .options(
+            joinedload(Application.program).joinedload('school'),
+            joinedload(Application.school),
+        )
         .order_by(Application.created_at.desc())
         .all()
     )

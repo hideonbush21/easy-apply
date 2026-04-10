@@ -53,6 +53,7 @@ class Application(db.Model):
             'priority': self.priority,
             'application_deadline': (
                 p.deadline_26fall.isoformat() if p and p.deadline_26fall else
+                p.deadline_25fall.isoformat() if p and p.deadline_25fall else
                 self.application_deadline.isoformat() if self.application_deadline else None
             ),
             'applied_at': self.applied_at.isoformat() if self.applied_at else None,
