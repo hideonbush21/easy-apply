@@ -1,6 +1,6 @@
 import uuid
 import re
-import random
+import secrets
 import string
 from datetime import datetime, timedelta
 import bcrypt
@@ -200,7 +200,7 @@ def send_code():
         ttl = r.ttl(_cooldown_key(email))
         return jsonify({'error': f'发送太频繁，请 {ttl} 秒后再试'}), 429
 
-    code = ''.join(random.choices(string.digits, k=6))
+    code = ''.join(secrets.choice(string.digits) for _ in range(6))
     r.setex(_otp_key(email), _OTP_TTL, code)
     r.delete(_attempts_key(email))
     r.setex(_cooldown_key(email), _OTP_COOLDOWN, '1')
@@ -209,6 +209,8 @@ def send_code():
         send_otp_email(email, code)
     except Exception as exc:
         current_app.logger.error('send_otp_email failed for %s: %s', email, exc)
+        r.delete(_otp_key(email))
+        r.delete(_cooldown_key(email))
         return jsonify({'error': '邮件发送失败，请稍后重试'}), 500
 
     return jsonify({'message': '验证码已发送，请查收邮件'})
@@ -253,11 +255,10 @@ def email_login():
     if not user:
         # 自动注册：邮箱前缀 + 随机4位数
         prefix = email.split('@')[0][:20]
-        suffix = ''.join(random.choices(string.digits, k=4))
+        suffix = ''.join(secrets.choice(string.digits) for _ in range(4))
         nickname = f'{prefix}_{suffix}'
-        # 防止昵称冲突（极小概率）
         while User.query.filter_by(nickname=nickname).first():
-            suffix = ''.join(random.choices(string.digits, k=4))
+            suffix = ''.join(secrets.choice(string.digits) for _ in range(4))
             nickname = f'{prefix}_{suffix}'
 
         user = User(
