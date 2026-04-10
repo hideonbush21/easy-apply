@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { login, sendCode, emailLogin } from '@/api/auth'
 import { syncOnboarding } from '@/api/profile'
@@ -26,14 +26,17 @@ function _redirect(fromOnboarding: boolean) {
 }
 
 export default function LoginPage() {
-  const [tab, setTab] = useState<'password' | 'email'>('email')
+  const location = useLocation()
+  const locationState = location.state as { tab?: 'email' | 'password'; email?: string; notice?: string } | null
+
+  const [tab, setTab] = useState<'password' | 'email'>(locationState?.tab ?? 'email')
 
   // 昵称密码 tab
   const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
 
   // 邮箱验证码 tab
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(locationState?.email ?? '')
   const [code, setCode] = useState('')
   const [codeSent, setCodeSent] = useState(false)
   const [countdown, setCountdown] = useState(0)
@@ -42,6 +45,13 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  const [notice, setNotice] = useState(locationState?.notice ?? '')
+
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(() => setNotice(''), 3000)
+    return () => clearTimeout(t)
+  }, [notice])
   const setAuth = useAuthStore(s => s.setAuth)
 
   const inputStyle = (field: string): React.CSSProperties => ({
@@ -174,7 +184,26 @@ export default function LoginPage() {
           <span style={{ fontSize: 20, fontWeight: 700, color: '#0a0a0a' }}>EasyApply</span>
         </Link>
 
-        <div style={{ width: '100%', maxWidth: 400 }}>
+        <div style={{ width: '100%', maxWidth: 400, position: 'relative' }}>
+          {notice && (
+            <div style={{
+              position: 'absolute', top: -56, left: 0, right: 0,
+              background: '#0d9e88', color: '#fff',
+              padding: '11px 16px', borderRadius: 10,
+              fontSize: 13, fontWeight: 500, textAlign: 'center',
+              boxShadow: '0 4px 16px rgba(29,211,176,0.3)',
+              animation: 'toast-slide-up 0.3s ease-out',
+              zIndex: 10,
+            }}>
+              {notice}
+              <style>{`
+                @keyframes toast-slide-up {
+                  from { opacity: 0; transform: translateY(10px); }
+                  to   { opacity: 1; transform: translateY(0); }
+                }
+              `}</style>
+            </div>
+          )}
           <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#6b7280', textDecoration: 'none', marginBottom: 32 }}
             onMouseEnter={e => (e.currentTarget.style.color = '#1dd3b0')}
             onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}>
@@ -254,7 +283,7 @@ export default function LoginPage() {
                 onMouseEnter={e => { if (!loading) e.currentTarget.style.transform = 'translateY(-1px)' }}
                 onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
               >
-                {loading ? '验证中...' : '登录 / 注册'}
+                {loading ? '登录中...' : '登录'}
               </button>
             </form>
           ) : (

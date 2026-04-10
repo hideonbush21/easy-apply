@@ -190,9 +190,15 @@ def _cooldown_key(email: str) -> str:
 def send_code():
     data = request.get_json(silent=True) or {}
     email = (data.get('email') or '').strip().lower()
+    mode = (data.get('mode') or 'login').strip()  # 'login' | 'register'
 
     if not email or not _EMAIL_RE.match(email):
         return jsonify({'error': '请输入有效的邮箱地址'}), 400
+
+    # 注册模式：邮箱已存在则拒绝，引导用户去登录
+    if mode == 'register':
+        if User.query.filter_by(email=email).first():
+            return jsonify({'error': '该邮箱已注册，请直接登录'}), 409
 
     try:
         r = get_redis()

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { register, sendCode, emailLogin } from '@/api/auth'
 import { syncOnboarding } from '@/api/profile'
@@ -26,6 +26,7 @@ function _redirect(fromOnboarding: boolean) {
 }
 
 export default function RegisterPage() {
+  const navigate = useNavigate()
   const [tab, setTab] = useState<'password' | 'email'>('email')
 
   // 用户名密码 tab
@@ -74,11 +75,16 @@ export default function RegisterPage() {
     setError('')
     setLoading(true)
     try {
-      await sendCode(email.trim())
+      await sendCode(email.trim(), 'register')
       setCodeSent(true)
       startCountdown()
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { error?: string } } }
+      const e = err as { response?: { data?: { error?: string }; status?: number } }
+      if (e.response?.status === 409) {
+        // 邮箱已注册，自动跳转到登录页邮箱 Tab，并预填邮箱
+        navigate('/login', { state: { tab: 'email', email: email.trim(), notice: '该邮箱已注册，已为你跳转到登录页' } })
+        return
+      }
       setError(e.response?.data?.error || '发送失败，请重试')
     } finally {
       setLoading(false)
@@ -259,7 +265,7 @@ export default function RegisterPage() {
                 onMouseEnter={e => { if (!loading) e.currentTarget.style.transform = 'translateY(-1px)' }}
                 onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
               >
-                {loading ? '验证中...' : '注册 / 登录'}
+                {loading ? '注册中...' : '注册'}
               </button>
             </form>
           ) : (
