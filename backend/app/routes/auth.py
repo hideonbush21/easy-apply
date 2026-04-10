@@ -1,11 +1,15 @@
 import uuid
 import re
+import random
+import string
 from datetime import datetime, timedelta
 import bcrypt
 import jwt
 from flask import Blueprint, request, jsonify, current_app
 from app.extensions import db
 from app.models.user import User, UserProfile, UserLoginLog
+from app.services.redis_client import get_redis
+from app.services.email_service import send_otp_email
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -162,3 +166,124 @@ def refresh():
 
     tokens = _generate_tokens(str(user.id), secret)
     return jsonify({'access_token': tokens['access_token']})
+
+
+_EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+_OTP_TTL = 300        # 5 分钟
+_OTP_COOLDOWN = 60    # 发送冷却 60 秒
+_OTP_MAX_ATTEMPTS = 3
+
+
+def _otp_key(email: str) -> str:
+    return f'otp:{email}'
+
+
+def _attempts_key(email: str) -> str:
+    return f'otp_attempts:{email}'
+
+
+def _cooldown_key(email: str) -> str:
+    return f'otp_cooldown:{email}'
+
+
+@auth_bp.route('/send-code', methods=['POST'])
+def send_code():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+
+    if not email or not _EMAIL_RE.match(email):
+        return jsonify({'error': '请输入有效的邮箱地址'}), 400
+
+    r = get_redis()
+
+    if r.exists(_cooldown_key(email)):
+        ttl = r.ttl(_cooldown_key(email))
+        return jsonify({'error': f'发送太频繁，请 {ttl} 秒后再试'}), 429
+
+    code = ''.join(random.choices(string.digits, k=6))
+    r.setex(_otp_key(email), _OTP_TTL, code)
+    r.delete(_attempts_key(email))
+    r.setex(_cooldown_key(email), _OTP_COOLDOWN, '1')
+
+    try:
+        send_otp_email(email, code)
+    except Exception as exc:
+        current_app.logger.error('send_otp_email failed for %s: %s', email, exc)
+        return jsonify({'error': '邮件发送失败，请稍后重试'}), 500
+
+    return jsonify({'message': '验证码已发送，请查收邮件'})
+
+
+@auth_bp.route('/email-login', methods=['POST'])
+def email_login():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    code = (data.get('code') or '').strip()
+
+    if not email or not _EMAIL_RE.match(email):
+        return jsonify({'error': '请输入有效的邮箱地址'}), 400
+    if not code or len(code) != 6 or not code.isdigit():
+        return jsonify({'error': '请输入6位数字验证码'}), 400
+
+    r = get_redis()
+
+    stored_code = r.get(_otp_key(email))
+    if not stored_code:
+        return jsonify({'error': '验证码已过期，请重新发送'}), 400
+
+    attempts = int(r.get(_attempts_key(email)) or 0)
+    if attempts >= _OTP_MAX_ATTEMPTS:
+        r.delete(_otp_key(email))
+        r.delete(_attempts_key(email))
+        return jsonify({'error': '验证码已失效，请重新发送'}), 400
+
+    if code != stored_code:
+        r.incr(_attempts_key(email))
+        r.expire(_attempts_key(email), _OTP_TTL)
+        remaining = _OTP_MAX_ATTEMPTS - attempts - 1
+        return jsonify({'error': f'验证码错误，还可尝试 {remaining} 次'}), 400
+
+    # 验证通过，删除 Redis key
+    r.delete(_otp_key(email))
+    r.delete(_attempts_key(email))
+
+    # 查找或创建账号
+    user = User.query.filter_by(email=email).first()
+    is_new = False
+    if not user:
+        # 自动注册：邮箱前缀 + 随机4位数
+        prefix = email.split('@')[0][:20]
+        suffix = ''.join(random.choices(string.digits, k=4))
+        nickname = f'{prefix}_{suffix}'
+        # 防止昵称冲突（极小概率）
+        while User.query.filter_by(nickname=nickname).first():
+            suffix = ''.join(random.choices(string.digits, k=4))
+            nickname = f'{prefix}_{suffix}'
+
+        user = User(
+            nickname=nickname,
+            email=email,
+            password_hash='',   # 纯邮箱账号无密码
+        )
+        db.session.add(user)
+        db.session.flush()
+        db.session.add(UserProfile(user_id=user.id))
+        db.session.commit()
+        is_new = True
+    elif not user.email:
+        # 已有账号但未绑定邮箱（通过昵称密码注册的老用户）
+        user.email = email
+        db.session.commit()
+
+    secret = current_app.config['JWT_SECRET_KEY']
+    tokens = _generate_tokens(str(user.id), secret)
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    db.session.add(UserLoginLog(user_id=user.id, ip_address=ip or None))
+    db.session.commit()
+
+    return jsonify({
+        'user': user.to_dict(),
+        'is_new': is_new,
+        **tokens,
+    }), 201 if is_new else 200
+

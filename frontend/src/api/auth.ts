@@ -29,4 +29,10 @@ export const register = async (nickname: string, password: string) => {
 export const refreshToken = (refresh_token: string) =>
   api.post('/auth/refresh', { refresh_token })
 
+export const sendCode = (email: string) =>
+  api.post('/auth/send-code', { email })
+
+export const emailLogin = (email: string, code: string) =>
+  api.post('/auth/email-login', { email, code })
+
 export { sha256Hex }
