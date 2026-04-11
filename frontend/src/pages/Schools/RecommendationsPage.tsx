@@ -7,7 +7,7 @@ import {
   type RecommendedProgram,
   type ProfileBasedResult,
 } from '@/api/schools'
-import { createApplication } from '@/api/applications'
+import { createApplication, getApplications } from '@/api/applications'
 import { Sparkles, RefreshCw, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, Plus, Check } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -66,6 +66,14 @@ export default function RecommendationsPage() {
   }
 
   useEffect(() => {
+    // 页面挂载时同步拉取已有申请，预填已加入状态
+    getApplications()
+      .then(r => {
+        const ids = new Set(r.data.map((a: { program_id?: string | null }) => a.program_id).filter(Boolean) as string[])
+        setAddedPrograms(ids)
+      })
+      .catch(() => null)
+
     const stateAutoGenerate = (location.state as { autoGenerate?: boolean })?.autoGenerate
     const queryAutoGenerate = new URLSearchParams(window.location.search).get('autoGenerate') === 'true'
     if (stateAutoGenerate || queryAutoGenerate) {
