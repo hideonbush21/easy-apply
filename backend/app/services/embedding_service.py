@@ -11,7 +11,7 @@
 """
 
 import os
-import pickle
+import json
 import numpy as np
 from typing import Optional
 import logging
@@ -93,9 +93,9 @@ def _load_from_redis(key: str) -> Optional[dict]:
             return None
         shape = tuple(map(int, data[b"shape"].split(b",")))
         vectors = np.frombuffer(data[b"vectors"], dtype=np.float32).reshape(shape).copy()
-        ids = pickle.loads(data[b"ids"])
-        school_ids = pickle.loads(data[b"school_ids"])
-        texts = pickle.loads(data[b"texts"])
+        ids = json.loads(data[b"ids"])
+        school_ids = json.loads(data[b"school_ids"])
+        texts = json.loads(data[b"texts"])
         logger.info(f"从 Redis 加载 programs 向量矩阵，共 {len(ids)} 条")
         return {"vectors": vectors, "ids": ids, "school_ids": school_ids, "texts": texts}
     except Exception as e:
@@ -111,9 +111,9 @@ def _save_to_redis(key: str, cache: dict) -> None:
         vectors: np.ndarray = cache["vectors"]
         r.hset(key, mapping={
             b"vectors": vectors.tobytes(),
-            b"ids": pickle.dumps(cache["ids"]),
-            b"school_ids": pickle.dumps(cache["school_ids"]),
-            b"texts": pickle.dumps(cache["texts"]),
+            b"ids": json.dumps([str(i) for i in cache["ids"]]).encode(),
+            b"school_ids": json.dumps(cache["school_ids"]).encode(),
+            b"texts": json.dumps(cache["texts"]).encode(),
             b"shape": f"{vectors.shape[0]},{vectors.shape[1]}".encode(),
         })
         r.expire(key, _MATRIX_TTL)
@@ -179,14 +179,16 @@ def find_similar_programs(
 
     school_id_strs = {str(sid) for sid in school_id_set}
 
+    # 一次 numpy 矩阵乘法计算全部相似度，避免 Python 层面循环
+    all_scores: np.ndarray = cache["vectors"] @ query_vec  # shape (n,)
+
     from collections import defaultdict
     school_best: dict[str, list] = defaultdict(list)
 
-    for pid, sid, vec in zip(cache["ids"], cache["school_ids"], cache["vectors"]):
+    for i, (pid, sid) in enumerate(zip(cache["ids"], cache["school_ids"])):
         if sid not in school_id_strs:
             continue
-        score = float(vec @ query_vec)
-        school_best[sid].append((score, pid))
+        school_best[sid].append((float(all_scores[i]), pid))
 
     results = []
     for sid, items in school_best.items():

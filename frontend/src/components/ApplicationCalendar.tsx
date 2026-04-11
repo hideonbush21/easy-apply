@@ -10,21 +10,25 @@ const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 const MONTHS = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月']
 
 const STATUS_COLOR: Record<string, string> = {
-  applying:   '#f59e0b',
-  submitted:  '#0ea5e9',
-  accepted:   '#10b981',
-  rejected:   '#ef4444',
-  withdrawn:  '#9ca3af',
-  waitlisted: '#8b5cf6',
+  '待申请': '#9ca3af',
+  '申请中': '#f59e0b',
+  '已提交': '#0ea5e9',
+  '面试中': '#f97316',
+  '录取':   '#10b981',
+  '拒绝':   '#ef4444',
+  '等待中': '#8b5cf6',
+  '撤销':   '#d1d5db',
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  applying:   '申请中',
-  submitted:  '已提交',
-  accepted:   '已录取',
-  rejected:   '已拒绝',
-  withdrawn:  '已撤回',
-  waitlisted: '候补',
+  '待申请': '待申请',
+  '申请中': '申请中',
+  '已提交': '已提交',
+  '面试中': '面试中',
+  '录取':   '已录取',
+  '拒绝':   '已拒绝',
+  '等待中': '等待中',
+  '撤销':   '已撤销',
 }
 
 export default function ApplicationCalendar({ applications }: Props) {
@@ -32,6 +36,7 @@ export default function ApplicationCalendar({ applications }: Props) {
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth()) // 0-indexed
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
+  const [hoveredDay, setHoveredDay] = useState<number | null>(null)
 
   // Map: "YYYY-MM-DD" -> Application[]
   const deadlineMap = useMemo(() => {
