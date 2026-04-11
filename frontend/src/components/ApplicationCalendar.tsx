@@ -113,10 +113,14 @@ export default function ApplicationCalendar({ applications }: Props) {
           const isSelected = selectedDay === day
           const _isToday = isToday(day)
 
+          const isHovered = hoveredDay === day
+
           return (
             <div
               key={key}
               onClick={() => setSelectedDay(isSelected ? null : day)}
+              onMouseEnter={() => { if (hasDeadline && !isSelected) setHoveredDay(day) }}
+              onMouseLeave={() => setHoveredDay(null)}
               style={{
                 borderRadius: 8,
                 padding: '6px 0 4px',
@@ -125,12 +129,10 @@ export default function ApplicationCalendar({ applications }: Props) {
                 alignItems: 'center',
                 gap: 3,
                 cursor: hasDeadline ? 'pointer' : 'default',
-                background: isSelected ? '#e6faf6' : _isToday ? '#f0fdf4' : 'transparent',
+                background: isSelected ? '#e6faf6' : isHovered ? '#f9fafb' : _isToday ? '#f0fdf4' : 'transparent',
                 border: isSelected ? '1.5px solid #1dd3b0' : _isToday ? '1.5px solid #bbf7d0' : '1.5px solid transparent',
                 transition: 'all 0.15s ease',
               }}
-              onMouseEnter={e => { if (hasDeadline && !isSelected) (e.currentTarget as HTMLElement).style.background = '#f9fafb' }}
-              onMouseLeave={e => { if (hasDeadline && !isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
             >
               <span style={{
                 fontSize: 13,
