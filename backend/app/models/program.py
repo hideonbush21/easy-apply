@@ -28,6 +28,7 @@ class Program(db.Model):
     application_plan = db.Column(JSONB)              # 多轮次时间计划
     program_url = db.Column(db.String(500))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def to_dict(self, include_school=False):
         data = {

@@ -291,8 +291,9 @@ function ProgramRow({ program, isLast, added, onAdd, onViewApplications }: {
 
   const handleAdd = async () => {
     setAdding(true)
+    const priority = program.similarity_score >= 0.8 ? '冲刺' : program.similarity_score >= 0.6 ? '匹配' : '保底'
     try {
-      await createApplication({ program_id: program.id })
+      await createApplication({ program_id: program.id, priority })
       onAdd(program.id)
     } catch (e: unknown) {
       const status = (e as { response?: { status?: number } })?.response?.status

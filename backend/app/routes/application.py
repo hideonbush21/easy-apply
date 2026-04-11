@@ -32,7 +32,7 @@ def list_applications():
         Application.query
         .filter_by(user_id=g.user.id)
         .options(
-            joinedload(Application.program).joinedload('school'),
+            joinedload(Application.program).joinedload(Program.school),
             joinedload(Application.school),
         )
         .order_by(Application.created_at.desc())

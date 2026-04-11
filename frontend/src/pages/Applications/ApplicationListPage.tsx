@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { getApplications, updateApplication, deleteApplication } from '@/api/applications'
 import type { Application } from '@/types'
 import { Trash2, ChevronDown, FileText, BookOpen } from 'lucide-react'
@@ -82,7 +82,8 @@ export default function ApplicationListPage() {
         <EmptyState
           icon={<FileText size={20} />}
           title={apps.length === 0 ? '暂无申请' : '没有符合筛选条件的申请'}
-          description={apps.length === 0 ? '前往学校库浏览并添加申请' : undefined}
+          description={apps.length === 0 ? '通过智能推荐功能添加心仪项目' : undefined}
+          action={apps.length === 0 ? <Link to="/dashboard/recommendations" className="text-sm font-medium text-violet-400 hover:text-violet-300 transition-colors">前往智能推荐 →</Link> : undefined}
         />
       ) : (
         <Table>

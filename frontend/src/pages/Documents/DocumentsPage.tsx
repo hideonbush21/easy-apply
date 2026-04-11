@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { getApplications } from '@/api/applications'
 import { generateRecommendation, getRecommendation } from '@/api/recommendations'
 import { generateSop, getSop } from '@/api/sop'
@@ -18,9 +19,11 @@ const TABS = [
 function LetterPanel({
   applications,
   type,
+  initialAppId,
 }: {
   applications: Application[]
   type: 'recommendation' | 'sop'
+  initialAppId?: string
 }) {
   const [selectedAppId, setSelectedAppId] = useState('')
   const [letter, setLetter] = useState<RecommendationLetter | SopLetter | null>(null)
@@ -32,6 +35,12 @@ function LetterPanel({
   const labels = isRec
     ? { title: '推荐信生成', desc: '使用 AI 根据你的背景生成个性化推荐信', btn: '推荐信', file: '推荐信' }
     : { title: '申请信生成 (SoP)', desc: '使用 AI 根据你的背景生成个性化申请信', btn: '申请信', file: '申请信' }
+
+  useEffect(() => {
+    if (initialAppId && applications.length > 0) {
+      handleSelectApp(initialAppId)
+    }
+  }, [initialAppId, applications]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectApp = async (appId: string) => {
     setSelectedAppId(appId)
@@ -69,7 +78,7 @@ function LetterPanel({
   const handleExport = () => {
     if (!letter) return
     const selectedApp = applications.find(a => a.id === selectedAppId)
-    const filename = `${labels.file}_${selectedApp?.school?.name_cn || '学校'}_${new Date().toLocaleDateString('zh-CN')}.txt`
+    const filename = `${labels.file}_${selectedApp?.school_name_cn || selectedApp?.school?.name_cn || selectedApp?.school?.name || '学校'}_${new Date().toLocaleDateString('zh-CN')}.txt`
     const blob = new Blob([letter.content], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -98,16 +107,16 @@ function LetterPanel({
             <option value="">-- 请选择一个申请 --</option>
             {applications.map(app => (
               <option key={app.id} value={app.id}>
-                {app.school?.name_cn || app.school?.name} · {app.major || '未指定专业'}
+                {app.school_name_cn || app.school?.name_cn || app.school?.name} · {app.program_name_cn || app.program_name_en || app.major || '未指定专业'}
               </option>
             ))}
           </Select>
 
           {selectedApp && (
             <div className="flex items-center gap-3 mt-3 p-3 bg-white/[0.04] rounded-xl text-sm text-slate-300 border border-white/[0.06]">
-              <span className="font-medium text-slate-100">{selectedApp.school?.name_cn || selectedApp.school?.name}</span>
+              <span className="font-medium text-slate-100">{selectedApp.school_name_cn || selectedApp.school?.name_cn || selectedApp.school?.name}</span>
               <span className="text-white/20">·</span>
-              <span>{selectedApp.major || '未指定专业'}</span>
+              <span>{selectedApp.program_name_cn || selectedApp.program_name_en || selectedApp.major || '未指定专业'}</span>
               <span className="text-white/20">·</span>
               <span className="text-slate-400">{selectedApp.school?.country}</span>
             </div>
@@ -169,8 +178,11 @@ function LetterPanel({
 }
 
 export default function DocumentsPage() {
+  const location = useLocation()
   const [tab, setTab] = useState('recommendation')
   const [applications, setApplications] = useState<Application[]>([])
+
+  const initialAppId = (location.state as { application?: Application })?.application?.id
 
   useEffect(() => {
     getApplications().then(r => setApplications(r.data))
@@ -186,10 +198,10 @@ export default function DocumentsPage() {
       <Tabs tabs={TABS} active={tab} onChange={setTab} className="mb-6" />
 
       {tab === 'recommendation' && (
-        <LetterPanel applications={applications} type="recommendation" />
+        <LetterPanel applications={applications} type="recommendation" initialAppId={initialAppId} />
       )}
       {tab === 'sop' && (
-        <LetterPanel applications={applications} type="sop" />
+        <LetterPanel applications={applications} type="sop" initialAppId={initialAppId} />
       )}
     </div>
   )

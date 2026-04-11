@@ -2,18 +2,21 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { getProfile } from '@/api/profile'
-import { getDeadlines } from '@/api/applications'
+import { getDeadlines, getApplications } from '@/api/applications'
 import type { UserProfile, Application } from '@/types'
 import { ChevronRight, Clock, Sparkles, FileText, User, BookOpen, School } from 'lucide-react'
+import ApplicationCalendar from '@/components/ApplicationCalendar'
 
 export default function Dashboard() {
   const { user } = useAuthStore()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [deadlines, setDeadlines] = useState<Application[]>([])
+  const [allApplications, setAllApplications] = useState<Application[]>([])
 
   useEffect(() => {
     getProfile().then(r => setProfile(r.data)).catch(() => null)
     getDeadlines().then(r => setDeadlines(r.data)).catch(() => null)
+    getApplications().then(r => setAllApplications(r.data)).catch(() => null)
   }, [])
 
   const completion = profile?.completion_rate ?? 0
@@ -94,6 +97,11 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Application Calendar */}
+      <div style={{ marginBottom: 28 }}>
+        <ApplicationCalendar applications={allApplications} />
       </div>
 
       {/* Quick links */}
