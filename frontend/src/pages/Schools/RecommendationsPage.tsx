@@ -20,31 +20,31 @@ type PageStatus = 'loading' | 'none' | 'fresh' | 'stale' | 'generating' | 'error
 export const PRIORITY_TIERS = [
   {
     label: '冲刺',
-    desc: '匹配度 ≥ 80%',
-    detail: '录取把握较小，属于拔高选择',
+    desc: '匹配度 < 60%',
+    detail: '背景与历史录取有差距，属于拔高选择',
     bg: '#fff1f2', color: '#be123c', border: '#fecdd3',
-    threshold: 0.8,
+    threshold: 0,
   },
   {
     label: '匹配',
     desc: '匹配度 60–79%',
-    detail: '背景与项目要求高度契合',
+    detail: '背景与项目要求基本契合，胜算较稳',
     bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe',
     threshold: 0.6,
   },
   {
     label: '保底',
-    desc: '匹配度 < 60%',
-    detail: '录取概率较高，稳妥之选',
+    desc: '匹配度 ≥ 80%',
+    detail: '与历史录取高度相似，录取概率较高',
     bg: '#f0fdf4', color: '#166534', border: '#bbf7d0',
-    threshold: 0,
+    threshold: 0.8,
   },
 ]
 
 function getPriorityTier(score: number) {
-  if (score >= 0.8) return PRIORITY_TIERS[0]
-  if (score >= 0.6) return PRIORITY_TIERS[1]
-  return PRIORITY_TIERS[2]
+  if (score >= 0.8) return PRIORITY_TIERS[2] // 保底
+  if (score >= 0.6) return PRIORITY_TIERS[1] // 匹配
+  return PRIORITY_TIERS[0]                   // 冲刺
 }
 
 const MATCH_LEVEL_LABEL: Record<string, string> = {
@@ -348,7 +348,7 @@ function ProgramRow({ program, isLast, added, onAdd, onViewApplications }: {
 
   const handleAdd = async () => {
     setAdding(true)
-    const priority = program.similarity_score >= 0.8 ? '冲刺' : program.similarity_score >= 0.6 ? '匹配' : '保底'
+    const priority = program.similarity_score >= 0.8 ? '保底' : program.similarity_score >= 0.6 ? '匹配' : '冲刺'
     try {
       await createApplication({ program_id: program.id, priority })
       onAdd(program.id)
