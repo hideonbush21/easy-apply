@@ -204,7 +204,8 @@ def get_case_based_recommendations(
     top_schools: int = 5,
     top_programs_per_school: int = 3,
     target_majors: Optional[list[str]] = None,
-) -> dict:    """
+) -> dict:
+    """
     主入口：基于历史案例的学校 + 专业推荐。
 
     参数:
