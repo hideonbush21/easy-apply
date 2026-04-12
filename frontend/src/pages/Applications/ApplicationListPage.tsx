@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { getApplications, updateApplication, deleteApplication } from '@/api/applications'
 import type { Application } from '@/types'
-import { Trash2, ChevronDown, FileText, BookOpen, ExternalLink, MapPin, Clock, GraduationCap } from 'lucide-react'
+import { Trash2, ChevronDown, FileText, BookOpen, ExternalLink } from 'lucide-react'
 import { Table } from '@/components/ui/Table'
-import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
 import { Select } from '@/components/ui/Input'
@@ -12,31 +11,27 @@ import { Select } from '@/components/ui/Input'
 // Synced with backend VALID_STATUSES
 const STATUSES = ['待申请', '材料准备中', '已提交', '面试邀请', '面试完成', '等待结果', '已录取', '已拒绝', '候补名单']
 
-type BadgeVariant = 'default' | 'primary' | 'indigo' | 'warning' | 'success' | 'danger' | 'orange' | 'accent'
-
-const STATUS_BADGE: Record<string, BadgeVariant> = {
-  '待申请':   'default',
-  '材料准备中': 'primary',
-  '已提交':   'indigo',
-  '面试邀请': 'warning',
-  '面试完成': 'warning',
-  '等待结果': 'orange',
-  '已录取':   'success',
-  '已拒绝':   'danger',
-  '候补名单': 'accent',
+// Light-theme status colors (bypasses dark-mode Badge component)
+const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }> = {
+  '待申请':    { bg: '#f3f4f6', color: '#6b7280',  border: '#e5e7eb' },
+  '材料准备中': { bg: '#ede9fe', color: '#7c3aed',  border: '#ddd6fe' },
+  '已提交':    { bg: '#e0e7ff', color: '#4338ca',  border: '#c7d2fe' },
+  '面试邀请':  { bg: '#fef3c7', color: '#b45309',  border: '#fde68a' },
+  '面试完成':  { bg: '#fef3c7', color: '#92400e',  border: '#fde68a' },
+  '等待结果':  { bg: '#fff7ed', color: '#c2410c',  border: '#fed7aa' },
+  '已录取':    { bg: '#d1fae5', color: '#065f46',  border: '#a7f3d0' },
+  '已拒绝':    { bg: '#fee2e2', color: '#991b1b',  border: '#fecaca' },
+  '候补名单':  { bg: '#e0f2fe', color: '#0369a1',  border: '#bae6fd' },
 }
 
-const PRIORITY_CLS: Record<string, string> = {
-  '冲刺': 'text-rose-500 font-semibold',
-  '匹配': 'text-violet-500 font-semibold',
-  '保底': 'text-emerald-500 font-semibold',
+const PRIORITY_STYLE: Record<string, { bg: string; color: string; border: string }> = {
+  '冲刺': { bg: '#fff1f2', color: '#be123c', border: '#fecdd3' },
+  '匹配': { bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe' },
+  '保底': { bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
 }
 
-const PRIORITY_BG: Record<string, string> = {
-  '冲刺': 'bg-rose-50 text-rose-600 border border-rose-100',
-  '匹配': 'bg-violet-50 text-violet-600 border border-violet-100',
-  '保底': 'bg-emerald-50 text-emerald-600 border border-emerald-100',
-}
+// Shared center-aligned cell class
+const CENTER = 'text-center'
 
 export default function ApplicationListPage() {
   const [apps, setApps] = useState<Application[]>([])
@@ -102,18 +97,21 @@ export default function ApplicationListPage() {
         <Table>
           <Table.Header>
             <Table.Row>
-              <Table.Head>学校 / 项目</Table.Head>
-              <Table.Head>学院 / 专业详情</Table.Head>
-              <Table.Head className="w-20">优先级</Table.Head>
-              <Table.Head className="w-28">截止日期</Table.Head>
-              <Table.Head className="w-36">状态</Table.Head>
-              <Table.Head className="w-20">操作</Table.Head>
+              {/* left-aligned text columns */}
+              <Table.Head>申请项目</Table.Head>
+              <Table.Head>项目详情</Table.Head>
+              {/* centered columns */}
+              <Table.Head className={`w-20 ${CENTER}`}>优先级</Table.Head>
+              <Table.Head className={`w-40 ${CENTER}`}>截止日期</Table.Head>
+              <Table.Head className={`w-40 ${CENTER}`}>状态</Table.Head>
+              <Table.Head className={`w-16 ${CENTER}`}>操作</Table.Head>
             </Table.Row>
           </Table.Header>
           <Table.Body>
             {filtered.map(app => {
               const schoolName = app.school_name_cn || app.school_name || app.school?.name_cn || app.school?.name
-              const programName = app.program_name_cn || app.program_name_en || app.major
+              const programNameCn = app.program_name_cn || app.major
+              const programNameEn = app.program_name_en
               const ranking = app.school_ranking
               const department = app.department
               const duration = app.duration
@@ -121,84 +119,90 @@ export default function ApplicationListPage() {
               const programUrl = app.program_url
               const ieltsReq = app.ielts_requirement as { min?: number } | null
               const toeflReq = app.toefl_requirement as { min?: number } | null
+              const statusStyle = STATUS_STYLE[app.status] || STATUS_STYLE['待申请']
+              const priorityStyle = app.priority ? PRIORITY_STYLE[app.priority] : null
 
               return (
                 <Table.Row key={app.id}>
-                  {/* 学校 / 项目 */}
+
+                  {/* 申请项目 */}
                   <Table.Cell>
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="font-semibold text-sm" style={{ color: '#111827' }}>
-                          {schoolName || '-'}
-                        </p>
+                      {/* 学校名 + 排名 */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-sm" style={{ color: '#111827' }}>
+                          {schoolName || '—'}
+                        </span>
                         {ranking && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
                                 style={{ background: '#f3f4f6', color: '#6b7280' }}>
-                            #{ranking}
+                            # {ranking}
                           </span>
                         )}
                       </div>
-                      {programName && (
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <GraduationCap size={11} style={{ color: '#9ca3af', flexShrink: 0 }} />
-                          <p className="text-xs" style={{ color: '#374151' }}>{programName}</p>
-                        </div>
+                      {/* 项目中文名 */}
+                      {programNameCn && (
+                        <p className="text-xs mt-0.5" style={{ color: '#4b5563' }}>{programNameCn}</p>
                       )}
-                      {app.program_name_en && app.program_name_cn && (
-                        <p className="text-[11px] mt-0.5" style={{ color: '#9ca3af' }}>{app.program_name_en}</p>
+                      {/* 项目英文名（仅有中文时补充显示） */}
+                      {programNameEn && programNameCn && programNameEn !== programNameCn && (
+                        <p className="text-[11px] mt-0.5 leading-tight" style={{ color: '#9ca3af' }}>{programNameEn}</p>
+                      )}
+                      {/* 学院 */}
+                      {department && (
+                        <p className="text-[11px] mt-1" style={{ color: '#6b7280' }}>
+                          <span style={{ color: '#9ca3af' }}>学院 · </span>{department}
+                        </p>
                       )}
                     </div>
                   </Table.Cell>
 
-                  {/* 学院 / 专业详情 */}
+                  {/* 项目详情：学制 / 学费 / 语言 / 链接 — 水平 chips */}
                   <Table.Cell>
-                    <div className="space-y-0.5 text-xs">
-                      {department && (
-                        <div className="flex items-center gap-1">
-                          <span style={{ color: '#6b7280' }}>学院：</span>
-                          <span style={{ color: '#374151' }}>{department}</span>
-                        </div>
-                      )}
+                    <div className="flex flex-wrap gap-1.5 items-center">
                       {duration && (
-                        <div className="flex items-center gap-1">
-                          <Clock size={10} style={{ color: '#9ca3af' }} />
-                          <span style={{ color: '#6b7280' }}>{duration}</span>
-                        </div>
+                        <span className="text-[11px] px-2 py-0.5 rounded-md"
+                              style={{ background: '#f3f4f6', color: '#374151' }}>
+                          {duration}
+                        </span>
                       )}
                       {tuitionCny && (
-                        <div className="flex items-center gap-1">
-                          <span style={{ color: '#6b7280' }}>学费：</span>
-                          <span style={{ color: '#374151' }}>¥{tuitionCny.toLocaleString()}</span>
-                        </div>
+                        <span className="text-[11px] px-2 py-0.5 rounded-md"
+                              style={{ background: '#fefce8', color: '#854d0e', border: '1px solid #fef08a' }}>
+                          ¥{tuitionCny.toLocaleString()}
+                        </span>
                       )}
-                      {(ieltsReq?.min || toeflReq?.min) && (
-                        <div className="flex items-center gap-2">
-                          {ieltsReq?.min && (
-                            <span style={{ color: '#6b7280' }}>雅思 {ieltsReq.min}+</span>
-                          )}
-                          {toeflReq?.min && (
-                            <span style={{ color: '#6b7280' }}>托福 {toeflReq.min}+</span>
-                          )}
-                        </div>
+                      {ieltsReq?.min && (
+                        <span className="text-[11px] px-2 py-0.5 rounded-md"
+                              style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                          雅思 {ieltsReq.min}+
+                        </span>
                       )}
-                      {!department && !duration && !tuitionCny && !ieltsReq?.min && !toeflReq?.min && (
-                        <span style={{ color: '#d1d5db' }}>—</span>
+                      {toeflReq?.min && (
+                        <span className="text-[11px] px-2 py-0.5 rounded-md"
+                              style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                          托福 {toeflReq.min}+
+                        </span>
                       )}
                       {programUrl && (
                         <a href={programUrl} target="_blank" rel="noopener noreferrer"
-                           className="inline-flex items-center gap-0.5 mt-0.5 transition-colors"
-                           style={{ color: '#8b5cf6' }}>
+                           className="inline-flex items-center gap-0.5 text-[11px] px-2 py-0.5 rounded-md transition-colors"
+                           style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe' }}>
                           <ExternalLink size={10} />
-                          <span>项目官网</span>
+                          官网
                         </a>
+                      )}
+                      {!duration && !tuitionCny && !ieltsReq?.min && !toeflReq?.min && !programUrl && (
+                        <span style={{ color: '#d1d5db' }}>—</span>
                       )}
                     </div>
                   </Table.Cell>
 
                   {/* 优先级 */}
-                  <Table.Cell>
-                    {app.priority ? (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${PRIORITY_BG[app.priority] || ''}`}>
+                  <Table.Cell className={CENTER}>
+                    {priorityStyle ? (
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-medium"
+                            style={{ background: priorityStyle.bg, color: priorityStyle.color, border: `1px solid ${priorityStyle.border}` }}>
                         {app.priority}
                       </span>
                     ) : (
@@ -207,45 +211,45 @@ export default function ApplicationListPage() {
                   </Table.Cell>
 
                   {/* 截止日期 */}
-                  <Table.Cell>
+                  <Table.Cell className={`${CENTER} whitespace-nowrap`}>
                     {app.application_deadline ? (
-                      <div className="flex items-center gap-1">
-                        <MapPin size={11} style={{ color: '#9ca3af' }} />
-                        <span className="tabular-nums text-xs" style={{ color: '#374151' }}>
-                          {app.application_deadline}
-                        </span>
-                      </div>
+                      <span className="tabular-nums text-xs font-medium" style={{ color: '#374151' }}>
+                        {app.application_deadline}
+                      </span>
                     ) : (
-                      <span className="text-xs" style={{ color: '#d1d5db' }}>—</span>
+                      <span style={{ color: '#d1d5db' }}>—</span>
                     )}
                   </Table.Cell>
 
-                  {/* 状态 */}
-                  <Table.Cell>
-                    <div className="relative inline-block">
+                  {/* 状态下拉 — 完全自定义 light-theme pill */}
+                  <Table.Cell className={CENTER}>
+                    <div className="relative inline-flex justify-center">
                       <select
                         value={app.status}
                         onChange={e => handleStatusChange(app.id, e.target.value)}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       >
                         {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
-                      <Badge
-                        variant={STATUS_BADGE[app.status] || 'default'}
-                        className="flex items-center gap-1 pr-1.5 pointer-events-none"
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full pointer-events-none"
+                        style={{
+                          background: statusStyle.bg,
+                          color: statusStyle.color,
+                          border: `1px solid ${statusStyle.border}`,
+                        }}
                       >
                         {app.status}
                         <ChevronDown size={10} className="opacity-60 shrink-0" />
-                      </Badge>
+                      </span>
                     </div>
                   </Table.Cell>
 
                   {/* 操作 */}
-                  <Table.Cell>
-                    <div className="flex items-center gap-2">
+                  <Table.Cell className={CENTER}>
+                    <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => navigate('/dashboard/documents', { state: { application: app } })}
-                        className="transition-colors"
                         title="文书管理"
                         style={{ color: '#9ca3af' }}
                         onMouseEnter={e => (e.currentTarget.style.color = '#8b5cf6')}
@@ -255,7 +259,6 @@ export default function ApplicationListPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(app.id)}
-                        className="transition-colors"
                         title="删除"
                         style={{ color: '#9ca3af' }}
                         onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
@@ -265,6 +268,7 @@ export default function ApplicationListPage() {
                       </button>
                     </div>
                   </Table.Cell>
+
                 </Table.Row>
               )
             })}
