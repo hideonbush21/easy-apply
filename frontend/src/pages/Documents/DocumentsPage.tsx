@@ -2,14 +2,13 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getAllDocuments, updateDocument } from '@/api/documents'
 import type { DocumentGroup } from '@/api/documents'
-import { getApplications } from '@/api/applications'
 import { generateSop } from '@/api/sop'
 import { generateRecommendation } from '@/api/recommendations'
 import type { Application } from '@/types'
 import { Tabs } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
-import { Select } from '@/components/ui/Input'
+import { EmptyState } from '@/components/ui/EmptyState'
 import RichTextEditor from '@/components/RichTextEditor'
 import {
   BookOpen,
@@ -29,127 +28,11 @@ const TABS = [
   { key: 'recommendation', label: '推荐信' },
 ]
 
-// Empty state: pick an application and generate first document
-function FirstDocumentPanel({
-  applications,
-  preSelectedId,
-  onGenerated,
-}: {
-  applications: Application[]
-  preSelectedId: string
-  onGenerated: () => void
-}) {
-  const [selectedAppId, setSelectedAppId] = useState(preSelectedId || '')
-  const [type, setType] = useState<'sop' | 'recommendation'>('sop')
-  const [generating, setGenerating] = useState(false)
-  const [error, setError] = useState('')
-
-  const handleGenerate = async () => {
-    if (!selectedAppId) return
-    setGenerating(true)
-    setError('')
-    try {
-      if (type === 'sop') {
-        await generateSop(selectedAppId)
-      } else {
-        await generateRecommendation(selectedAppId)
-      }
-      window.dispatchEvent(new Event('documents-updated'))
-      onGenerated()
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { error?: string } } }
-      setError(e.response?.data?.error || '生成失败，请检查 API Key 配置')
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const selectedApp = applications.find(a => a.id === selectedAppId)
-
-  return (
-    <div className="flex flex-col items-center justify-center min-h-full p-10" style={{ animation: 'fade-in 0.3s ease-out' }}>
-      <div
-        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
-        style={{ background: '#e6faf6', border: '1px solid rgba(29,211,176,0.2)' }}
-      >
-        <BookOpen size={28} style={{ color: '#10b981' }} />
-      </div>
-      <h2 className="text-xl font-bold mb-1" style={{ color: '#0a0a0a', fontFamily: 'var(--font-display)' }}>
-        生成第一篇文书
-      </h2>
-      <p className="text-sm mb-8 text-center" style={{ color: '#6b7280', maxWidth: 360 }}>
-        选择一个申请项目，AI 将根据你的背景自动生成个性化文书
-      </p>
-
-      <div className="w-full" style={{ maxWidth: 420 }}>
-        <div className="mb-4">
-          <Select
-            label="选择申请项目"
-            value={selectedAppId}
-            onChange={e => setSelectedAppId(e.target.value)}
-          >
-            <option value="">-- 请选择 --</option>
-            {applications.map(app => (
-              <option key={app.id} value={app.id}>
-                {app.school_name_cn || app.school_name || '未知学校'} · {app.program_name_cn || app.major || '未指定专业'}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <div className="mb-4">
-          <Select
-            label="文书类型"
-            value={type}
-            onChange={e => setType(e.target.value as 'sop' | 'recommendation')}
-          >
-            <option value="sop">申请信 (SoP)</option>
-            <option value="recommendation">推荐信</option>
-          </Select>
-        </div>
-
-        {selectedApp && (
-          <div className="flex items-center gap-3 mb-4 p-3 rounded-xl text-sm" style={{ background: '#f0fdf9', border: '1px solid rgba(29,211,176,0.2)' }}>
-            <GraduationCap size={16} style={{ color: '#10b981', flexShrink: 0 }} />
-            <div>
-              <span className="font-medium" style={{ color: '#0a0a0a' }}>
-                {selectedApp.school_name_cn || selectedApp.school_name}
-              </span>
-              <span className="mx-2" style={{ color: '#d1d5db' }}>·</span>
-              <span style={{ color: '#6b7280' }}>
-                {selectedApp.program_name_cn || selectedApp.major || '未指定专业'}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: '#fff1f2', border: '1px solid #fecdd3', color: '#e11d48' }}>
-            {error}
-          </div>
-        )}
-
-        <Button
-          variant="accent"
-          onClick={handleGenerate}
-          disabled={!selectedAppId}
-          loading={generating}
-          className="w-full"
-        >
-          <Sparkles size={16} />
-          {generating ? 'AI 生成中...' : `生成${type === 'sop' ? '申请信' : '推荐信'}`}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
 export default function DocumentsPage() {
   const location = useLocation()
-  const navState = location.state as { application?: Application } | null
+  const pendingApp = (location.state as { application?: Application } | null)?.application
 
   const [documents, setDocuments] = useState<DocumentGroup[]>([])
-  const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedAppId, setSelectedAppId] = useState('')
   const [activeTab, setActiveTab] = useState<'sop' | 'recommendation'>('sop')
@@ -160,37 +43,56 @@ export default function DocumentsPage() {
   const [toast, setToast] = useState('')
   const originalContentRef = useRef('')
 
+  // Fetch documents on mount
   useEffect(() => {
-    fetchAll()
+    fetchDocuments()
   }, [])
 
-  const fetchAll = async () => {
+  const fetchDocuments = async () => {
     setLoading(true)
     try {
-      const [docsRes, appsRes] = await Promise.all([
-        getAllDocuments(),
-        getApplications(),
-      ])
-      const docs = docsRes.data.documents
-      setDocuments(docs)
-      setApplications(appsRes.data)
+      const res = await getAllDocuments()
+      const docs = res.data.documents
 
-      if (docs.length > 0) {
-        // If navigated from ApplicationListPage with a specific application, prefer that
-        const preSelected = navState?.application?.id
-        const match = preSelected ? docs.find(d => d.application_id === preSelected) : null
-        setSelectedAppId(match ? preSelected! : docs[0].application_id)
+      // If navigated from ApplicationListPage with a specific app, select it.
+      // If that app has no letters yet, inject a virtual entry so the sidebar shows it.
+      if (pendingApp?.id && !selectedAppId) {
+        const found = docs.find(d => d.application_id === pendingApp.id)
+        if (found) {
+          setDocuments(docs)
+          setSelectedAppId(pendingApp.id)
+        } else {
+          // App has no letters yet — add a virtual entry at the top
+          const virtual: DocumentGroup = {
+            application_id: pendingApp.id,
+            school_name: pendingApp.school_name || null,
+            school_name_cn: pendingApp.school_name_cn || null,
+            program_name_cn: pendingApp.program_name_cn || pendingApp.major || null,
+            program_name_en: pendingApp.program_name_en || null,
+            sop: null,
+            recommendation: null,
+          }
+          setDocuments([virtual, ...docs])
+          setSelectedAppId(pendingApp.id)
+        }
+      } else {
+        setDocuments(docs)
+        if (docs.length > 0 && !selectedAppId) {
+          setSelectedAppId(docs[0].application_id)
+        }
       }
     } catch {
-      // silent
+      // handle error silently
     } finally {
       setLoading(false)
     }
   }
 
+  // Current selected document group
   const selectedDoc = documents.find(d => d.application_id === selectedAppId)
   const currentLetter = selectedDoc?.[activeTab] ?? null
 
+  // Sync editor content when selection changes
   useEffect(() => {
     const content = currentLetter?.content || ''
     setEditorContent(content)
@@ -208,6 +110,7 @@ export default function DocumentsPage() {
     setTimeout(() => setToast(''), 2500)
   }
 
+  // Confirm dialog for unsaved changes
   const confirmSwitch = (): boolean => {
     if (!isDirty) return true
     return window.confirm('当前文书有未保存的修改，确定要切换吗？')
@@ -223,6 +126,7 @@ export default function DocumentsPage() {
     setActiveTab(key as 'sop' | 'recommendation')
   }
 
+  // Save
   const handleSave = async () => {
     if (!currentLetter || !isDirty) return
     setSaving(true)
@@ -230,6 +134,7 @@ export default function DocumentsPage() {
       await updateDocument(activeTab, currentLetter.id, editorContent)
       originalContentRef.current = editorContent
       setIsDirty(false)
+      // Update local state
       setDocuments(prev =>
         prev.map(d =>
           d.application_id === selectedAppId
@@ -245,6 +150,7 @@ export default function DocumentsPage() {
     }
   }
 
+  // Generate
   const handleGenerate = async () => {
     if (!selectedAppId) return
     setGenerating(true)
@@ -254,7 +160,7 @@ export default function DocumentsPage() {
       } else {
         await generateRecommendation(selectedAppId)
       }
-      await fetchAll()
+      await fetchDocuments()
       window.dispatchEvent(new Event('documents-updated'))
       showToast('文书生成成功')
     } catch (err: unknown) {
@@ -265,6 +171,7 @@ export default function DocumentsPage() {
     }
   }
 
+  // Export PDF
   const exportPdf = () => {
     const element = document.createElement('div')
     element.innerHTML = editorContent
@@ -283,6 +190,7 @@ export default function DocumentsPage() {
     }).from(element).save()
   }
 
+  // Export Word
   const exportDocx = async () => {
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = editorContent
@@ -304,6 +212,7 @@ export default function DocumentsPage() {
     saveAs(blob, `${activeTab === 'sop' ? 'SoP' : '推荐信'}_${schoolName}_${new Date().toLocaleDateString('zh-CN')}.docx`)
   }
 
+  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 gap-2" style={{ color: '#9ca3af' }}>
@@ -312,14 +221,20 @@ export default function DocumentsPage() {
     )
   }
 
-  // No documents yet — show first-generation flow
+  // No documents at all
   if (documents.length === 0) {
     return (
-      <FirstDocumentPanel
-        applications={applications}
-        preSelectedId={navState?.application?.id || ''}
-        onGenerated={fetchAll}
-      />
+      <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold" style={{ color: '#0a0a0a', fontFamily: 'var(--font-display)' }}>我的文书</h2>
+          <p className="text-sm mt-1" style={{ color: '#6b7280' }}>管理和编辑你的留学文书</p>
+        </div>
+        <EmptyState
+          icon={<BookOpen size={20} style={{ color: '#9ca3af' }} />}
+          title="暂无文书"
+          description="请先在申请管理中生成文书"
+        />
+      </div>
     )
   }
 
@@ -340,7 +255,7 @@ export default function DocumentsPage() {
         </div>
       )}
 
-      {/* Left sidebar */}
+      {/* Left sidebar - Program list */}
       <aside
         className="w-72 shrink-0 flex flex-col overflow-y-auto"
         style={{ borderRight: '1px solid #e5e7eb', background: 'rgba(255,255,255,0.6)' }}
@@ -371,18 +286,21 @@ export default function DocumentsPage() {
                 } : {}}
               >
                 <div className="flex items-center gap-2.5">
-                  <GraduationCap size={16} style={isActive ? { color: 'rgba(255,255,255,0.8)' } : { color: '#9ca3af' }} />
+                  <GraduationCap size={16} className={isActive ? 'text-white/80' : ''} style={!isActive ? { color: '#9ca3af' } : {}} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate" style={{ color: isActive ? 'white' : '#1f2937' }}>
+                    <p className={`text-sm font-medium truncate ${isActive ? 'text-white' : ''}`}
+                       style={!isActive ? { color: '#1f2937' } : {}}>
                       {schoolName}
                     </p>
                     {programName && (
-                      <p className="text-xs truncate mt-0.5" style={{ color: isActive ? 'rgba(255,255,255,0.7)' : '#9ca3af' }}>
+                      <p className={`text-xs truncate mt-0.5 ${isActive ? 'text-white/70' : ''}`}
+                         style={!isActive ? { color: '#9ca3af' } : {}}>
                         {programName}
                       </p>
                     )}
                   </div>
                 </div>
+                {/* Letter indicators */}
                 <div className="flex items-center gap-2 mt-2 ml-6">
                   <span
                     className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
@@ -413,8 +331,9 @@ export default function DocumentsPage() {
         </nav>
       </aside>
 
-      {/* Right panel */}
+      {/* Right panel - Editor */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between shrink-0" style={{ borderBottom: '1px solid #e5e7eb' }}>
           <div>
             <h3 className="text-base font-semibold" style={{ color: '#0a0a0a', fontFamily: 'var(--font-display)' }}>
@@ -427,6 +346,7 @@ export default function DocumentsPage() {
           <Tabs tabs={TABS} active={activeTab} onChange={handleTabChange} />
         </div>
 
+        {/* Content area */}
         <div className="flex-1 p-6 overflow-y-auto" style={{ background: '#f8fdfb' }}>
           {currentLetter ? (
             <>
@@ -436,6 +356,7 @@ export default function DocumentsPage() {
                 editable
               />
 
+              {/* Bottom toolbar */}
               <div className="flex items-center justify-between mt-4">
                 <div className="flex items-center gap-2 text-xs" style={{ color: '#9ca3af' }}>
                   {currentLetter.updated_at ? (
@@ -452,11 +373,19 @@ export default function DocumentsPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button variant="secondary" size="sm" onClick={exportPdf}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={exportPdf}
+                  >
                     <FileDown size={14} />
                     导出 PDF
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={exportDocx}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={exportDocx}
+                  >
                     <FileText size={14} />
                     导出 Word
                   </Button>
@@ -474,7 +403,7 @@ export default function DocumentsPage() {
               </div>
             </>
           ) : (
-            <div className="glass flex flex-col items-center justify-center py-20 text-center rounded-2xl">
+            <div className="glass flex flex-col items-center justify-center py-20 text-center">
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
                 style={{ background: '#e6faf6', border: '1px solid rgba(29,211,176,0.2)' }}
@@ -488,9 +417,13 @@ export default function DocumentsPage() {
                 暂无{activeTab === 'sop' ? '申请信' : '推荐信'}
               </p>
               <p className="text-xs mb-5" style={{ color: '#9ca3af' }}>
-                点击下方按钮使用 AI 生成{activeTab === 'sop' ? '申请信 (SoP)' : '推荐信'}
+                点击下方按钮使用 AI 为此申请生成{activeTab === 'sop' ? '申请信 (SoP)' : '推荐信'}
               </p>
-              <Button variant="accent" onClick={handleGenerate} loading={generating}>
+              <Button
+                variant="primary"
+                onClick={handleGenerate}
+                loading={generating}
+              >
                 <Sparkles size={16} />
                 {generating ? 'AI 生成中...' : `生成${activeTab === 'sop' ? '申请信' : '推荐信'}`}
               </Button>
