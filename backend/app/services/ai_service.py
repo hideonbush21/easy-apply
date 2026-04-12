@@ -170,3 +170,41 @@ SoP Requirements:
         result = _call_api(messages)
 
     return result
+
+
+def humanize_text(content: str) -> str:
+    """对 AI 生成的文书进行二次改写，降低 AI 味，使其读起来更像真人所写。"""
+    api_key = os.getenv('KIMI_API_KEY', '')
+    if not api_key:
+        raise ValueError('KIMI_API_KEY is not configured')
+
+    prompt = f"""你是一位专业的文书润色专家。请将以下 AI 生成的文书段落进行改写，使其读起来更像真人所写，而不是 AI。
+
+改写要求：
+1. 打破过于对称的排比句式（"首先…其次…最后"等），制造自然的节奏变化
+2. 将抽象概括替换为具体场景、数字或细节
+3. 适当使用短句，避免每句都是复合长句
+4. 去除"值得注意的是"、"此外"、"总而言之"等 AI 惯用连接词
+5. 保留原文的核心内容和观点，不改变事实
+6. 保持与原文相同的语言（中文改中文，英文改英文）
+7. 保持与原文大致相同的长度
+
+只返回改写后的文本，不要任何解释说明。
+
+原文：
+{content}"""
+
+    response = requests.post(
+        'https://api.moonshot.cn/v1/chat/completions',
+        headers={
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+        },
+        json={
+            'model': 'moonshot-v1-8k',
+            'messages': [{'role': 'user', 'content': prompt}],
+        },
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()['choices'][0]['message']['content']

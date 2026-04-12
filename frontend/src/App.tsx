@@ -14,6 +14,7 @@ import SchoolDetailPage from '@/pages/Schools/SchoolDetailPage'
 import RecommendationsPage from '@/pages/Schools/RecommendationsPage'
 import ApplicationListPage from '@/pages/Applications/ApplicationListPage'
 import DocumentsPage from '@/pages/Documents/DocumentsPage'
+import AiDetectionPage from '@/pages/Documents/AiDetectionPage'
 import AdminDashboard from '@/pages/Admin/AdminDashboard'
 import UserManagePage from '@/pages/Admin/UserManagePage'
 
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="schools/:id" element={<SchoolDetailPage />} />
           <Route path="applications" element={<ApplicationListPage />} />
           <Route path="documents" element={<DocumentsPage />} />
+          <Route path="ai-detection" element={<AiDetectionPage />} />
           <Route path="timeline" element={<TimelinePage />} />
           <Route path="recommendations" element={<Navigate to="/dashboard/documents" replace />} />
 
