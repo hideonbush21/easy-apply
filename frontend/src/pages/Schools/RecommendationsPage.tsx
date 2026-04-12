@@ -16,6 +16,37 @@ import { Spinner } from '@/components/ui/Spinner'
 
 type PageStatus = 'loading' | 'none' | 'fresh' | 'stale' | 'generating' | 'error'
 
+// Priority thresholds — must stay in sync with ProgramRow handleAdd logic
+export const PRIORITY_TIERS = [
+  {
+    label: '冲刺',
+    desc: '匹配度 ≥ 80%',
+    detail: '录取把握较小，属于拔高选择',
+    bg: '#fff1f2', color: '#be123c', border: '#fecdd3',
+    threshold: 0.8,
+  },
+  {
+    label: '匹配',
+    desc: '匹配度 60–79%',
+    detail: '背景与项目要求高度契合',
+    bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe',
+    threshold: 0.6,
+  },
+  {
+    label: '保底',
+    desc: '匹配度 < 60%',
+    detail: '录取概率较高，稳妥之选',
+    bg: '#f0fdf4', color: '#166534', border: '#bbf7d0',
+    threshold: 0,
+  },
+]
+
+function getPriorityTier(score: number) {
+  if (score >= 0.8) return PRIORITY_TIERS[0]
+  if (score >= 0.6) return PRIORITY_TIERS[1]
+  return PRIORITY_TIERS[2]
+}
+
 const MATCH_LEVEL_LABEL: Record<string, string> = {
   exact:         '精确匹配',
   'widened_0.5': '扩大匹配 (±0.5 GPA)',
@@ -192,6 +223,24 @@ export default function RecommendationsPage() {
             )}
           </div>
 
+          {/* Priority legend */}
+          <div className="mb-6 flex items-stretch gap-3 flex-wrap">
+            {PRIORITY_TIERS.map(tier => (
+              <div key={tier.label}
+                className="flex items-start gap-2.5 px-4 py-3 rounded-xl flex-1 min-w-[160px]"
+                style={{ background: tier.bg, border: `1px solid ${tier.border}` }}>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full mt-0.5 shrink-0"
+                  style={{ background: tier.color, color: '#fff' }}>
+                  {tier.label}
+                </span>
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: tier.color }}>{tier.desc}</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: tier.color, opacity: 0.75 }}>{tier.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <div className="space-y-4">
             {result.schools.length === 0 ? (
               <div className="text-center py-16 text-sm" style={{ color: '#9ca3af' }}>
@@ -315,6 +364,7 @@ function ProgramRow({ program, isLast, added, onAdd, onViewApplications }: {
   }
 
   const score = Math.round(program.similarity_score * 100)
+  const tier = getPriorityTier(program.similarity_score)
   const ielts = program.ielts_requirement
     ? (typeof program.ielts_requirement === 'object' ? program.ielts_requirement.total : program.ielts_requirement)
     : null
@@ -337,6 +387,10 @@ function ProgramRow({ program, isLast, added, onAdd, onViewApplications }: {
           <span className="text-xs font-semibold px-1.5 py-0.5 rounded"
             style={{ background: '#f0fdf9', color: '#1dd3b0' }}>
             匹配度 {score}%
+          </span>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: tier.bg, color: tier.color, border: `1px solid ${tier.border}` }}>
+            {tier.label}
           </span>
         </div>
         <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: '#6b7280' }}>
