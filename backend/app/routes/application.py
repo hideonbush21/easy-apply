@@ -1,6 +1,6 @@
 from datetime import datetime, date, timedelta
 from flask import Blueprint, request, jsonify, g
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 from app.extensions import db
 from app.models.application import Application
 from app.models.school import School
@@ -32,8 +32,8 @@ def list_applications():
         Application.query
         .filter_by(user_id=g.user.id)
         .options(
-            joinedload(Application.program).joinedload('school'),
-            joinedload(Application.school),
+            selectinload(Application.program).selectinload('school'),
+            selectinload(Application.school),
         )
         .order_by(Application.created_at.desc())
         .all()
@@ -59,7 +59,7 @@ def create_application():
         ).first()
         if existing:
             return jsonify({'error': '已加入申请列表', 'application_id': str(existing.id)}), 409
-        school_id = str(program.school_id)
+        school_id = program.school_id
     elif school_id:
         school = School.query.get(school_id)
         if not school:
@@ -144,6 +144,10 @@ def get_deadlines():
         .filter_by(user_id=g.user.id)
         .filter(Application.application_deadline >= today)
         .filter(Application.application_deadline <= in_30_days)
+        .options(
+            selectinload(Application.program).selectinload('school'),
+            selectinload(Application.school),
+        )
         .order_by(Application.application_deadline.asc())
         .all()
     )
