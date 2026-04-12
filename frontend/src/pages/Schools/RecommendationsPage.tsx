@@ -16,35 +16,33 @@ import { Spinner } from '@/components/ui/Spinner'
 
 type PageStatus = 'loading' | 'none' | 'fresh' | 'stale' | 'generating' | 'error'
 
-// Priority thresholds — must stay in sync with ProgramRow handleAdd logic
+// Priority tiers — legend + per-program tag
+// Driven by backend priority_suggestion (GPA delta vs historical avg + ranking)
 export const PRIORITY_TIERS = [
   {
     label: '冲刺',
-    desc: '匹配度 < 60%',
+    desc: 'GPA 低于录取均值 0.2+，或 Top 50 院校',
     detail: '背景与历史录取有差距，属于拔高选择',
     bg: '#fff1f2', color: '#be123c', border: '#fecdd3',
-    threshold: 0,
   },
   {
     label: '匹配',
-    desc: '匹配度 60–79%',
-    detail: '背景与项目要求基本契合，胜算较稳',
+    desc: 'GPA 与录取均值相差 ±0.2 以内',
+    detail: '背景与历史录取相当，胜算较稳',
     bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe',
-    threshold: 0.6,
   },
   {
     label: '保底',
-    desc: '匹配度 ≥ 80%',
-    detail: '与历史录取高度相似，录取概率较高',
+    desc: 'GPA 高于录取均值 0.2+，或排名 150+',
+    detail: '与历史录取相比有优势，录取概率较高',
     bg: '#f0fdf4', color: '#166534', border: '#bbf7d0',
-    threshold: 0.8,
   },
 ]
 
-function getPriorityTier(score: number) {
-  if (score >= 0.8) return PRIORITY_TIERS[2] // 保底
-  if (score >= 0.6) return PRIORITY_TIERS[1] // 匹配
-  return PRIORITY_TIERS[0]                   // 冲刺
+const PRIORITY_STYLE: Record<string, typeof PRIORITY_TIERS[0]> = {
+  '冲刺': PRIORITY_TIERS[0],
+  '匹配': PRIORITY_TIERS[1],
+  '保底': PRIORITY_TIERS[2],
 }
 
 const MATCH_LEVEL_LABEL: Record<string, string> = {
@@ -348,9 +346,8 @@ function ProgramRow({ program, isLast, added, onAdd, onViewApplications }: {
 
   const handleAdd = async () => {
     setAdding(true)
-    const priority = program.similarity_score >= 0.8 ? '保底' : program.similarity_score >= 0.6 ? '匹配' : '冲刺'
     try {
-      await createApplication({ program_id: program.id, priority })
+      await createApplication({ program_id: program.id, priority: program.priority_suggestion })
       onAdd(program.id)
     } catch (e: unknown) {
       const status = (e as { response?: { status?: number } })?.response?.status
@@ -364,7 +361,7 @@ function ProgramRow({ program, isLast, added, onAdd, onViewApplications }: {
   }
 
   const score = Math.round(program.similarity_score * 100)
-  const tier = getPriorityTier(program.similarity_score)
+  const tier = PRIORITY_STYLE[program.priority_suggestion] ?? PRIORITY_TIERS[1]
   const ielts = program.ielts_requirement
     ? (typeof program.ielts_requirement === 'object' ? program.ielts_requirement.total : program.ielts_requirement)
     : null

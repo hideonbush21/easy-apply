@@ -34,6 +34,7 @@ export interface RecommendedProgram {
   deadline_25fall: string | null
   program_url: string | null
   similarity_score: number
+  priority_suggestion: '冲刺' | '匹配' | '保底'
 }
 
 export interface RecommendedSchool {
