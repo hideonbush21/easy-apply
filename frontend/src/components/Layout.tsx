@@ -1,5 +1,7 @@
+import { useEffect, useState, useMemo } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
+import { checkDocuments } from '@/api/documents'
 import {
   LayoutDashboard,
   User,
@@ -12,19 +14,45 @@ import {
   CalendarDays,
 } from 'lucide-react'
 
-const navItems = [
-  { to: '/dashboard', label: '首页', icon: LayoutDashboard, end: true },
-  { to: '/dashboard/profile', label: '我的档案', icon: User, end: false },
-  { to: '/dashboard/schools', label: '学校库', icon: School, end: true },
-  { to: '/dashboard/schools/recommendations', label: '智能推荐', icon: Sparkles, end: false },
-  { to: '/dashboard/applications', label: '申请管理', icon: FileText, end: false },
-  { to: '/dashboard/documents', label: '文书生成', icon: BookOpen, end: false },
-  { to: '/dashboard/timeline', label: '申请时间轴', icon: CalendarDays, end: false },
-]
-
 export default function Layout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
+  const [hasDocuments, setHasDocuments] = useState(false)
+
+  useEffect(() => {
+    checkDocuments()
+      .then(r => setHasDocuments(r.data.has_documents))
+      .catch(() => {})
+  }, [])
+
+  // Listen for documents-updated event to re-check
+  useEffect(() => {
+    const handler = () => {
+      checkDocuments()
+        .then(r => setHasDocuments(r.data.has_documents))
+        .catch(() => {})
+    }
+    window.addEventListener('documents-updated', handler)
+    return () => window.removeEventListener('documents-updated', handler)
+  }, [])
+
+  const navItems = useMemo(() => {
+    const items = [
+      { to: '/dashboard', label: '首页', icon: LayoutDashboard, end: true },
+      { to: '/dashboard/profile', label: '我的档案', icon: User, end: false },
+      { to: '/dashboard/schools', label: '学校库', icon: School, end: true },
+      { to: '/dashboard/schools/recommendations', label: '智能推荐', icon: Sparkles, end: false },
+      { to: '/dashboard/applications', label: '申请管理', icon: FileText, end: false },
+    ]
+
+    if (hasDocuments) {
+      items.push({ to: '/dashboard/documents', label: '我的文书', icon: BookOpen, end: false })
+    }
+
+    items.push({ to: '/dashboard/timeline', label: '申请时间轴', icon: CalendarDays, end: false })
+
+    return items
+  }, [hasDocuments])
 
   const handleLogout = () => {
     logout()
