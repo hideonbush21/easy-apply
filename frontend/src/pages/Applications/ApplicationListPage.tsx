@@ -123,18 +123,17 @@ export default function ApplicationListPage() {
                     <select
                       value={app.status}
                       onChange={e => handleStatusChange(app.id, e.target.value)}
-                      className="pl-2.5 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer appearance-none focus:outline-none"
-                      style={{ background: 'transparent' }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     >
                       {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                     <Badge
                       variant={STATUS_BADGE[app.status] || 'default'}
-                      className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                      className="flex items-center gap-1 pr-1.5 pointer-events-none"
                     >
                       {app.status}
+                      <ChevronDown size={10} className="opacity-60 shrink-0" />
                     </Badge>
-                    <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-current opacity-60" />
                   </div>
                 </Table.Cell>
                 <Table.Cell>

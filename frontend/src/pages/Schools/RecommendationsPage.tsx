@@ -102,7 +102,7 @@ export default function RecommendationsPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl" style={{ animation: 'fade-in 0.3s ease-out' }}>
+    <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
       {/* Header */}
       <div className="mb-5 flex items-start justify-between">
         <div>

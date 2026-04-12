@@ -54,9 +54,8 @@
       "Bash(venv/bin/python -c \"\nimport redis, os\nfrom dotenv import load_dotenv\nload_dotenv\\('.env'\\)\nurl = os.environ['REDIS_URL']\nprint\\('URL:', url[:30], '...'\\)\nr = redis.Redis\\(host='sterling-marmoset-95893.upstash.io', port=6379, password='gQAAAAAAAXaVAAIncDFkMjQ2ODBkMTE2NmU0NjZlOGJhOWIyMjMzNzA0YWI4OXAxOTU4OTM', username='default', ssl=True, decode_responses=True\\)\nprint\\('ping:', r.ping\\(\\)\\)\n\")",
       "Bash(grep -n \"def\\\\|@.*_bp.route\" /Users/mac/Desktop/github/easy-apply/backend/app/routes/*.py)",
       "Bash(python3:*)",
-      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
-      "Bash(grep -E \"\\\\.\\(tsx?|jsx?|sql|json\\)$\")",
-      "Bash(npx vite:*)"
+      "WebSearch",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

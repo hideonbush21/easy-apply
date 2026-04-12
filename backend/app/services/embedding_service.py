@@ -146,9 +146,13 @@ def get_programs_cache() -> dict:
 
     ids, school_ids, texts = [], [], []
     for p in programs:
+        text = _build_program_text(p)
+        if not text.strip():
+            logger.warning(f"Program id={p.id} 文本为空，跳过向量化")
+            continue
         ids.append(p.id)
         school_ids.append(str(p.school_id))
-        texts.append(_build_program_text(p))
+        texts.append(text)
 
     vectors = encode(texts)
     _programs_cache = {"vectors": vectors, "ids": ids, "school_ids": school_ids, "texts": texts}
