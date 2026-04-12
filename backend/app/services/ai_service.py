@@ -173,10 +173,23 @@ SoP Requirements:
 
 
 def humanize_text(content: str) -> str:
-    """对 AI 生成的文书进行二次改写，降低 AI 味，使其读起来更像真人所写。"""
+    """对 AI 生成的文书进行二次改写，降低 AI 味，使其读起来更像真人所写。
+    自动检测输入语言，强制要求输出与输入语言一致。
+    """
     api_key = os.getenv('KIMI_API_KEY', '')
     if not api_key:
         raise ValueError('KIMI_API_KEY is not configured')
+
+    is_chinese = _has_cjk(content)
+    if is_chinese:
+        lang_instruction = '输出语言：必须使用中文，禁止出现任何英文句子。'
+        lang_check_msg = '你的上一次回复中出现了非中文内容，请重新改写，全文必须使用中文。'
+    else:
+        lang_instruction = 'Output language: English only. Do not include any Chinese or non-Latin characters.'
+        lang_check_msg = (
+            'Your previous response contained non-English characters. '
+            'Please rewrite entirely in English only.'
+        )
 
     prompt = f"""你是一位专业的文书润色专家。请将以下 AI 生成的文书段落进行改写，使其读起来更像真人所写，而不是 AI。
 
@@ -186,25 +199,38 @@ def humanize_text(content: str) -> str:
 3. 适当使用短句，避免每句都是复合长句
 4. 去除"值得注意的是"、"此外"、"总而言之"等 AI 惯用连接词
 5. 保留原文的核心内容和观点，不改变事实
-6. 保持与原文相同的语言（中文改中文，英文改英文）
-7. 保持与原文大致相同的长度
+6. 保持与原文大致相同的长度
+7. {lang_instruction}
 
 只返回改写后的文本，不要任何解释说明。
 
 原文：
 {content}"""
 
-    response = requests.post(
-        'https://api.moonshot.cn/v1/chat/completions',
-        headers={
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json',
-        },
-        json={
-            'model': 'moonshot-v1-8k',
-            'messages': [{'role': 'user', 'content': prompt}],
-        },
-        timeout=60,
-    )
-    response.raise_for_status()
-    return response.json()['choices'][0]['message']['content']
+    def _call_api(messages):
+        response = requests.post(
+            'https://api.moonshot.cn/v1/chat/completions',
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+            },
+            json={
+                'model': 'moonshot-v1-8k',
+                'messages': messages,
+            },
+            timeout=60,
+        )
+        response.raise_for_status()
+        return response.json()['choices'][0]['message']['content']
+
+    messages = [{'role': 'user', 'content': prompt}]
+    result = _call_api(messages)
+
+    # 语言校验：输入中文则输出必须有中文，输入英文则输出不能有中文
+    language_violated = (is_chinese and not _has_cjk(result)) or (not is_chinese and _has_cjk(result))
+    if language_violated:
+        messages.append({'role': 'assistant', 'content': result})
+        messages.append({'role': 'user', 'content': lang_check_msg})
+        result = _call_api(messages)
+
+    return result
