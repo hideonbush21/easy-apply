@@ -28,7 +28,7 @@ def run():
     try:
         from app import create_app
         from app.services.embedding_service import (
-            _build_program_text, _get_program_redis_key, _MATRIX_TTL, encode,
+            _build_program_text, _get_program_redis_key, _ttl_with_jitter, encode,
         )
         from app.models.program import Program
         from app.services.redis_client import get_redis_binary
@@ -59,7 +59,7 @@ def run():
                 batch_texts = to_encode_texts[i:i + batch_size]
                 vectors = encode(batch_texts)
                 for j, pid in enumerate(batch_ids):
-                    r.setex(_get_program_redis_key(pid), _MATRIX_TTL, vectors[j].tobytes())
+                    r.setex(_get_program_redis_key(pid), _ttl_with_jitter(), vectors[j].tobytes())
                 logger.info(f'[warmup] {min(i + batch_size, len(to_encode_ids))}/{len(to_encode_ids)} 完成')
 
             logger.info('[warmup] 预热完成，启动 gunicorn')

@@ -19,8 +19,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-_MODEL_TAG = "te3l"       # text-embedding-3-large 缩写，换模型时修改此处
-_MATRIX_TTL = 2592000     # Redis TTL：30 天
+_MODEL_TAG = "te3l"              # text-embedding-3-large 缩写，换模型时修改此处
+_MATRIX_TTL_BASE = 15552000     # Redis TTL 基准：180 天
+_MATRIX_TTL_JITTER = 604800     # 随机抖动上限：±7 天，防止大批量同时过期
+
+
+def _ttl_with_jitter() -> int:
+    """返回带随机抖动的 TTL（秒），防止大批量缓存同时过期引发编码风暴。"""
+    import random
+    return _MATRIX_TTL_BASE + random.randint(-_MATRIX_TTL_JITTER, _MATRIX_TTL_JITTER)
 
 
 def _get_client():
@@ -136,7 +143,7 @@ def find_similar_programs(
                 try:
                     pipe = r.pipeline(transaction=False)
                     for j, i in enumerate(valid_idx):
-                        pipe.setex(_get_program_redis_key(ids[i]), _MATRIX_TTL, vecs[i].tobytes())
+                    pipe.setex(_get_program_redis_key(ids[i]), _ttl_with_jitter(), vecs[i].tobytes())
                     pipe.execute()
                 except Exception as e:
                     logger.warning(f"Redis 回写失败: {e}")
