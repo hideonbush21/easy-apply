@@ -159,3 +159,19 @@ def get_stats():
         'total_schools': total_schools,
         'application_status_distribution': status_distribution,
     })
+
+
+@admin_bp.route('/cache/invalidate', methods=['POST'])
+@admin_required
+def invalidate_cache():
+    """
+    使学校/专业缓存失效。
+    在 Supabase 直接修改 schools/programs 数据后调用，版本号递增使所有旧缓存立即失效。
+    """
+    from app.services.redis_client import get_redis, bump_schools_version
+    try:
+        r = get_redis()
+        new_ver = bump_schools_version(r)
+        return jsonify({'message': f'缓存已失效，当前版本号：{new_ver}'})
+    except Exception as e:
+        return jsonify({'error': f'缓存失效失败：{str(e)}'}), 500

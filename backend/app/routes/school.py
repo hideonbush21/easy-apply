@@ -1,3 +1,4 @@
+import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
@@ -10,6 +11,7 @@ from app.models.school import School
 from app.models.program import Program
 from app.models.user import UserProfile
 from app.services.school_recommendation import get_recommendations, build_recommendation_hash
+from app.services.redis_client import get_redis, get_schools_version, _SCHOOLS_TTL
 from app.utils.decorators import login_required
 
 school_bp = Blueprint('school', __name__, url_prefix='/api/schools')
@@ -53,6 +55,23 @@ def list_schools():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 20, type=int), 100)
 
+    # ── L1 Redis 缓存读取 ─────────────────────────────────────────────
+    cache_key = None
+    try:
+        r = get_redis()
+        ver = get_schools_version(r)
+        cache_key = (
+            f"schools:v{ver}:list"
+            f":{country or '_'}:{ranking_max or '_'}:{major or '_'}"
+            f":p{page}:n{per_page}"
+        )
+        cached = r.get(cache_key)
+        if cached:
+            return jsonify(json.loads(cached))
+    except Exception as e:
+        logger.warning(f"Redis 读取 schools 缓存失败，降级查 DB: {e}")
+
+    # ── DB 查询 ───────────────────────────────────────────────────────
     query = School.query.options(selectinload(School.programs))
     if country:
         query = query.filter(School.country == country)
@@ -79,7 +98,6 @@ def list_schools():
         deadlines = [p.deadline_26fall for p in programs if p.deadline_26fall]
         d['deadline_earliest'] = min(deadlines).isoformat() if deadlines else None
 
-        # 学校简介：优先用学校层级，否则取第一个有内容的专业描述
         if not d.get('description'):
             for p in programs:
                 if p.description:
@@ -88,13 +106,22 @@ def list_schools():
 
         return d
 
-    return jsonify({
+    result = {
         'schools': [_enrich(s) for s in pagination.items],
         'total': pagination.total,
         'page': page,
         'per_page': per_page,
         'pages': pagination.pages,
-    })
+    }
+
+    # ── 写入 Redis ────────────────────────────────────────────────────
+    if cache_key:
+        try:
+            r.setex(cache_key, _SCHOOLS_TTL, json.dumps(result, default=str))
+        except Exception as e:
+            logger.warning(f"Redis 写入 schools 缓存失败: {e}")
+
+    return jsonify(result)
 
 
 @school_bp.route('/trigger-recommendation', methods=['POST'])
@@ -169,7 +196,29 @@ def get_recommendations_route():
 @school_bp.route('/<school_id>', methods=['GET'])
 @login_required
 def get_school(school_id):
+    # ── Redis 读取 ────────────────────────────────────────────────────
+    cache_key = None
+    try:
+        r = get_redis()
+        ver = get_schools_version(r)
+        cache_key = f"schools:v{ver}:detail:{school_id}"
+        cached = r.get(cache_key)
+        if cached:
+            return jsonify(json.loads(cached))
+    except Exception as e:
+        logger.warning(f"Redis 读取 school detail 缓存失败: {e}")
+
     school = School.query.get(school_id)
     if not school:
         return jsonify({'error': 'School not found'}), 404
-    return jsonify(school.to_dict())
+
+    result = school.to_dict()
+
+    # ── 写入 Redis ────────────────────────────────────────────────────
+    if cache_key:
+        try:
+            r.setex(cache_key, _SCHOOLS_TTL, json.dumps(result, default=str))
+        except Exception as e:
+            logger.warning(f"Redis 写入 school detail 缓存失败: {e}")
+
+    return jsonify(result)

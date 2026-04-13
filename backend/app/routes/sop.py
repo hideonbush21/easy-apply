@@ -4,7 +4,7 @@ from app.models.sop import SopLetter
 from app.models.application import Application
 from app.models.experience import Experience
 from app.models.school import School
-from app.services.ai_service import generate_sop
+from app.services.ai_service import generate_sop, humanize_text
 from app.utils.decorators import login_required
 
 sop_bp = Blueprint('sop', __name__, url_prefix='/api/sop')
@@ -89,3 +89,19 @@ def delete_sop(letter_id):
     db.session.delete(letter)
     db.session.commit()
     return jsonify({'message': 'Deleted'}), 200
+
+
+@sop_bp.route('/humanize', methods=['POST'])
+@login_required
+def humanize():
+    data = request.get_json(silent=True) or {}
+    content = (data.get('content') or '').strip()
+    if not content:
+        return jsonify({'error': '请输入需要优化的文书内容'}), 400
+    try:
+        result = humanize_text(content)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'AI 服务异常: {str(e)}'}), 502
+    return jsonify({'humanized_content': result})

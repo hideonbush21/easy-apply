@@ -92,14 +92,14 @@ def login():
 
     user = User.query.filter_by(nickname=nickname).first()
     if not user:
-        return jsonify({'error': 'Invalid credentials'}), 401
+        return jsonify({'error': '用户名或密码错误'}), 401
 
     # Legacy v1 account (bcrypt(plaintext)) — ask frontend to retry with plaintext
     if not _is_v2(user.password_hash):
         return jsonify({'error': 'legacy account', 'code': 'LEGACY_ACCOUNT'}), 401
 
     if not _check_v2(password, user.password_hash):
-        return jsonify({'error': 'Invalid credentials'}), 401
+        return jsonify({'error': '密码错误，请重新输入'}), 401
 
     return _issue_tokens_and_log(user)
 
@@ -116,14 +116,14 @@ def legacy_login():
 
     user = User.query.filter_by(nickname=nickname).first()
     if not user:
-        return jsonify({'error': 'Invalid credentials'}), 401
+        return jsonify({'error': '用户名或密码错误'}), 401
 
     # Only allow this endpoint for v1 accounts
     if _is_v2(user.password_hash):
-        return jsonify({'error': 'Invalid credentials'}), 401
+        return jsonify({'error': '用户名或密码错误'}), 401
 
     if not bcrypt.checkpw(plaintext.encode(), user.password_hash.encode()):
-        return jsonify({'error': 'Invalid credentials'}), 401
+        return jsonify({'error': '密码错误，请重新输入'}), 401
 
     # Migrate: re-hash as v2 using sha256 of the plaintext
     import hashlib

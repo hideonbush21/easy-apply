@@ -16,8 +16,13 @@ api.interceptors.response.use(
   res => res,
   err => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('access_token')
-      window.location.href = '/login'
+      // 登录/注册接口本身会返回 401（密码错误、验证码错误），不应触发跳转
+      const url: string = err.config?.url || ''
+      const isAuthEndpoint = url.startsWith('/auth/')
+      if (!isAuthEndpoint) {
+        localStorage.removeItem('access_token')
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(err)
   }

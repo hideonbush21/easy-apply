@@ -7,6 +7,8 @@ from app.routes.recommendation import recommendation_bp
 from app.routes.sop import sop_bp
 from app.routes.admin import admin_bp
 from app.routes.school_recommendation import school_rec_bp
+from app.routes.webhook import webhook_bp
+from app.routes.documents import documents_bp
 
 
 def register_routes(app):
@@ -19,3 +21,5 @@ def register_routes(app):
     app.register_blueprint(sop_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(school_rec_bp)
+    app.register_blueprint(webhook_bp)
+    app.register_blueprint(documents_bp)

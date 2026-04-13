@@ -33,12 +33,21 @@ def generate():
     experiences = Experience.query.filter_by(user_id=g.user.id).all()
     experiences_list = [e.to_dict() for e in experiences]
 
+    # 推荐人引导信息（可选，由前端问答步骤收集）
+    recommender_context = {
+        'recommender_type':      data.get('recommender_type', ''),
+        'relationship_context':  data.get('relationship_context', ''),
+        'key_incident':          data.get('key_incident', ''),
+        'quantified_outcome':    data.get('quantified_outcome', ''),
+    }
+
     try:
         content = generate_recommendation(
             user_profile=profile_dict,
             experiences=experiences_list,
             school_name=school.name_cn or school.name,
             major=app_obj.major or '',
+            recommender_context=recommender_context,
         )
     except ValueError as e:
         return jsonify({'error': str(e)}), 400

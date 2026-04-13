@@ -10,8 +10,77 @@ def _has_cjk(text: str) -> bool:
     return bool(_CJK_PATTERN.search(text))
 
 
-def generate_recommendation(user_profile: dict, experiences: list, school_name: str, major: str) -> str:
-    """Call Kimi API to generate an English recommendation letter."""
+# ── Few-shot examples extracted from real successful recommendation letters ──
+# Selected for structural quality: specific incident + strong narrative arc
+_RL_EXAMPLES = [
+    # Example 1: Academic professor with very specific story (student read optional papers proactively)
+    """\
+To whom it may concern,
+
+As a professor and the Dean of School of Mathematics and Statistics, I am writing with pleasure to recommend this excellent student for admission to your respected program.
+
+I have known him since he attended the course Probability Theory under my instruction. He is one of the excellent students I have taught, smart, creative and modest. As the most active one in the class, he always can bring new ideas for discussion. He has been keeping as the top 10% of the class throughout all quizzes and projects.
+
+Of all his strengths, the one impressed me most is that he is a serious learner. At the beginning of the class, I distributed a list of optional papers for reading which could expand students' knowledge in this subject. I did not expect any one would start to read them before the midterm exam. However, only one week later, he brought a list of questions about the papers — he had already finished half of them. Some of the readings which contain advanced concepts and models are really hard for undergraduates to understand, but he still devoted quite a lot of time to figure them out. He told me he would like to learn more and not just be limited to the textbook.
+
+I firmly believe that he has the qualities to be an excellent graduate student. I therefore strongly recommend him to pursue your esteemed program. If further information is required, please do not hesitate to contact me.
+
+Yours sincerely,
+Professor, School of Mathematics
+[University Name]""",
+
+    # Example 2: Industry supervisor with specific incident (employee submitted improvement report after crisis)
+    """\
+To Whom It May Concern,
+
+It is my great pleasure to recommend my colleague, who just graduated from university as an honored student. When I interviewed her in June, I was impressed with her academic achievement and strong communication skills. Though I knew she would apply for advanced study and would not stay long, I was happy to offer her a position because of her serious working attitude and strong willingness to learn.
+
+Under my supervision, she grasped her daily work quickly. Whenever I gave her an assignment, she would turn in a satisfactory report on time. There were several occasions which required overtime work; she accepted these without any complaints. Most impressively, when our computer system broke down, she had to confirm all transactions one by one by calling customers. The very next day, she submitted a three-page report outlining how to effectively improve working efficiency if the computer system failed again. That level of initiative — turning a crisis into a process improvement — is rare even among experienced staff.
+
+She was an excellent employee with a good personality and strong communication skills. Though only working for four months, she became one of the favorite persons in our group.
+
+Based on my observation, I believe she would be an excellent student in your program. I would strongly recommend her without any reservation.
+
+Sincerely,
+[Name], Associate Director
+[Institution]""",
+
+    # Example 3: Academic professor with research achievement (student published in national journal)
+    """\
+To whom it may concern,
+
+I am a professor at the School of Management. It is my great pleasure to recommend this student for your esteemed graduate program. Her natural talent for engaging in management research is obvious for all to see.
+
+I made acquaintance with her in my course of Micro Economics. From the very beginning, she impressed me with her earnest study attitude. In my opinion, field investigation is an indispensable part of management education. With an interest in exploring the relation between traditional culture and modern economy, she took a historic hall as a real case for seeking connections among traditional art, old urban districts, and modern economic development. I had not expected that she could fulfill that research, but after a whole summer vacation's field investigation — fully analyzing statistics collected from her survey — she accomplished the research and published her paper in a national-level periodical. This kind of academic achievement was rare among students at her age.
+
+Although she ranked first among more than 100 students in her department, she did not cease moving forward. She participated in diversified campus activities and, leading a team in a major management competition, demonstrated outstanding leadership and analytical ability, winning second place in the preliminary round.
+
+I firmly believe she is academically qualified for your graduate programme and well-prepared for professional education. I recommend her without hesitation.
+
+Sincerely yours,
+Associate Professor, School of Management
+[University Name]""",
+]
+
+_RL_FEW_SHOT_BLOCK = "\n\n---\n\n".join(
+    f"[EXAMPLE {i+1}]\n{ex}" for i, ex in enumerate(_RL_EXAMPLES)
+)
+
+
+def generate_recommendation(user_profile: dict, experiences: list, school_name: str, major: str,
+                            recommender_context: dict | None = None) -> str:
+    """Call Kimi API to generate an English recommendation letter.
+
+    Uses few-shot prompting with real successful recommendation letters to produce
+    structurally authentic output with concrete anecdotes rather than generic praise.
+
+    recommender_context (optional):
+        recommender_type:     e.g. "学术导师" / "实习主管"
+        relationship_context: e.g. "大三上学期的计量经济学课程"
+        key_incident:         e.g. "期末项目中独立发现数据集错误并重新建模"
+        quantified_outcome:   e.g. "最终获得A+，全班最高分"
+    """
+    ctx = recommender_context or {}
     experience_text = []
     for exp in experiences:
         parts = [f"[{exp.get('type', '')}] {exp.get('title', '')}"]
@@ -27,26 +96,58 @@ def generate_recommendation(user_profile: dict, experiences: list, school_name: 
 
     experiences_str = '\n'.join(experience_text) if experience_text else 'No experience provided'
 
-    prompt = f"""You are a senior study abroad application consultant. Based on the student's background below, write a personalized recommendation letter for their application to {major} at {school_name}.
+    # Build recommender context block — only include filled fields
+    recommender_lines = []
+    if ctx.get('recommender_type'):
+        recommender_lines.append(f"- Recommender type: {ctx['recommender_type']}")
+    if ctx.get('relationship_context'):
+        recommender_lines.append(f"- How recommender knows the student: {ctx['relationship_context']}")
+    if ctx.get('key_incident'):
+        recommender_lines.append(f"- Key incident the recommender witnessed (USE THIS AS THE CORE OF PARAGRAPH 2): {ctx['key_incident']}")
+    if ctx.get('quantified_outcome'):
+        recommender_lines.append(f"- Quantified outcome / achievement: {ctx['quantified_outcome']}")
 
-IMPORTANT: The entire letter MUST be written in English only. Do not include any Chinese or other non-English characters.
+    recommender_block = ''
+    if recommender_lines:
+        recommender_block = (
+            "\nRecommender-Provided Context (HIGH PRIORITY — weave these details into the letter naturally):\n"
+            + '\n'.join(recommender_lines)
+            + '\n'
+        )
+
+    prompt = f"""You are a senior study abroad application consultant. Your task is to write a highly personalized recommendation letter.
+
+First, study these {len(_RL_EXAMPLES)} real recommendation letters that were used in successful study abroad applications. Learn their structure, tone, and — most importantly — their use of specific incidents rather than generic praise:
+
+{_RL_FEW_SHOT_BLOCK}
+
+---
+
+Now write a NEW recommendation letter for the student below applying to {major} at {school_name}.
+{recommender_block}
+STRUCTURAL RULES (derived from the examples above):
+1. Paragraph 1 — Recommender self-introduction + how/when they know the student (use the recommender context above if provided)
+2. Paragraph 2 — Academic or professional performance with AT LEAST ONE specific, concrete incident or story. If a key incident is provided above, build paragraph 2 around it. Do NOT just say "she performed well" — show a scene.
+3. Paragraph 3 — Character and soft skills (work ethic, initiative, communication), grounded in observable behavior
+4. Paragraph 4 — Strong closing recommendation, express confidence, offer to be contacted
+
+LANGUAGE RULES:
+- Write entirely in English — no Chinese characters permitted
+- Use varied sentence lengths: mix short punchy sentences with longer complex ones
+- Avoid AI clichés: "It is worth noting", "Furthermore", "In conclusion", "Needless to say"
+- Use active voice for specific incidents; the recommender should sound like they genuinely remember this student
+- Length: 450–650 words
 
 Student Background:
-- Name: {user_profile.get('name', 'Applicant')}
+- Name: {user_profile.get('name', 'the applicant')}
 - Undergraduate Institution: {user_profile.get('home_institution', '')} ({user_profile.get('institution_tier', '')})
-- Major: {user_profile.get('current_major', '')}
+- Undergraduate Major: {user_profile.get('current_major', '')}
 - GPA: {user_profile.get('gpa', '')}/{user_profile.get('gpa_scale', 4.0)}
 - Language Scores: {user_profile.get('language_scores', {})}
-- Key Experiences:
+- Key Experiences (use these as supplementary detail):
 {experiences_str}
 
-Requirements:
-1. Use formal academic recommendation letter format
-2. Highlight the student's academic abilities and professional potential
-3. Reference specific experiences and achievements
-4. Explain why the student is a strong fit for this program and institution
-5. Length: 500-800 words
-6. Write entirely in English — no Chinese characters permitted"""
+Write the full recommendation letter now. Do not include any preamble or explanation — output the letter only."""
 
     api_key = os.getenv('KIMI_API_KEY', '')
     if not api_key:
@@ -167,6 +268,70 @@ SoP Requirements:
                 'Do not include any Chinese or other non-Latin characters.'
             ),
         })
+        result = _call_api(messages)
+
+    return result
+
+
+def humanize_text(content: str) -> str:
+    """对 AI 生成的文书进行二次改写，降低 AI 味，使其读起来更像真人所写。
+    自动检测输入语言，强制要求输出与输入语言一致。
+    """
+    api_key = os.getenv('KIMI_API_KEY', '')
+    if not api_key:
+        raise ValueError('KIMI_API_KEY is not configured')
+
+    is_chinese = _has_cjk(content)
+    if is_chinese:
+        lang_instruction = '输出语言：必须使用中文，禁止出现任何英文句子。'
+        lang_check_msg = '你的上一次回复中出现了非中文内容，请重新改写，全文必须使用中文。'
+    else:
+        lang_instruction = 'Output language: English only. Do not include any Chinese or non-Latin characters.'
+        lang_check_msg = (
+            'Your previous response contained non-English characters. '
+            'Please rewrite entirely in English only.'
+        )
+
+    prompt = f"""你是一位专业的文书润色专家。请将以下 AI 生成的文书段落进行改写，使其读起来更像真人所写，而不是 AI。
+
+改写要求：
+1. 打破过于对称的排比句式（"首先…其次…最后"等），制造自然的节奏变化
+2. 将抽象概括替换为具体场景、数字或细节
+3. 适当使用短句，避免每句都是复合长句
+4. 去除"值得注意的是"、"此外"、"总而言之"等 AI 惯用连接词
+5. 保留原文的核心内容和观点，不改变事实
+6. 保持与原文大致相同的长度
+7. {lang_instruction}
+
+只返回改写后的文本，不要任何解释说明。
+
+原文：
+{content}"""
+
+    def _call_api(messages):
+        response = requests.post(
+            'https://api.moonshot.cn/v1/chat/completions',
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+            },
+            json={
+                'model': 'moonshot-v1-8k',
+                'messages': messages,
+            },
+            timeout=60,
+        )
+        response.raise_for_status()
+        return response.json()['choices'][0]['message']['content']
+
+    messages = [{'role': 'user', 'content': prompt}]
+    result = _call_api(messages)
+
+    # 语言校验：输入中文则输出必须有中文，输入英文则输出不能有中文
+    language_violated = (is_chinese and not _has_cjk(result)) or (not is_chinese and _has_cjk(result))
+    if language_violated:
+        messages.append({'role': 'assistant', 'content': result})
+        messages.append({'role': 'user', 'content': lang_check_msg})
         result = _call_api(messages)
 
     return result

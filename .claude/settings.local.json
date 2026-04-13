@@ -41,7 +41,22 @@
       "Bash(grep -n \"''/''\" /Users/mac/Desktop/github/easy-apply/frontend/src/components/Layout.tsx)",
       "Bash(node:*)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5174)",
-      "Bash(__NEW_LINE_45167dab1cc2e66d__ git:*)"
+      "Bash(__NEW_LINE_45167dab1cc2e66d__ git:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//Users/mac/Desktop/github/easy-apply/**)",
+      "Bash(done)",
+      "Bash(cat /Users/mac/Desktop/github/easy-apply/.github/workflows/*.yml)",
+      "Bash(gh pr:*)",
+      "Bash(cat /Users/mac/Desktop/github/easy-apply/poc/resend_email/*.py)",
+      "Bash(find /Users/mac/Desktop/github/easy-apply/frontend/src/api -name *.ts)",
+      "Bash(venv/bin/pip show:*)",
+      "Bash(venv/bin/python -c \"\nimport redis, os\nfrom dotenv import load_dotenv\nload_dotenv\\('.env'\\)\nurl = os.environ['REDIS_URL']\nprint\\('URL:', url[:30], '...'\\)\nr = redis.Redis\\(host='sterling-marmoset-95893.upstash.io', port=6379, password='gQAAAAAAAXaVAAIncDFkMjQ2ODBkMTE2NmU0NjZlOGJhOWIyMjMzNzA0YWI4OXAxOTU4OTM', username='default', ssl=True, decode_responses=True\\)\nprint\\('ping:', r.ping\\(\\)\\)\n\")",
+      "Bash(grep -n \"def\\\\|@.*_bp.route\" /Users/mac/Desktop/github/easy-apply/backend/app/routes/*.py)",
+      "Bash(python3:*)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?|sql|json\\)$\")",
+      "Bash(npx vite:*)"
     ]
   }
 }

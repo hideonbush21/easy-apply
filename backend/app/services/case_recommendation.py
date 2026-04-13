@@ -27,6 +27,50 @@ logger = logging.getLogger(__name__)
 GPA_WINDOWS = [0.3, 0.5, 0.8]
 MIN_CASES_THRESHOLD = [20, 10, 5]  # 对应窗口扩大时的触发阈值
 
+_PRIORITY_ORDER = ['冲刺', '匹配', '保底']
+
+
+def _compute_priority(user_gpa: float, avg_gpa: Optional[float], ranking: Optional[int]) -> str:
+    """
+    基于 GPA delta 和学校排名计算申请优先级。
+
+    主信号 — 用户 GPA vs 历史录取均 GPA 的差值：
+      delta >= +0.2  → 保底（用户背景强于录取均值）
+      -0.2 ~ +0.2   → 匹配（与录取均值相当）
+      <= -0.2       → 冲刺（用户背景弱于录取均值）
+
+    二次修正 — 学校排名：
+      排名 <= 50   → 向难度方向偏移一级（→ 冲刺）
+      排名 >= 150  → 向保底方向偏移一级（→ 保底）
+    """
+    if avg_gpa is not None:
+        delta = user_gpa - avg_gpa
+        if delta >= 0.2:
+            base = '保底'
+        elif delta <= -0.2:
+            base = '冲刺'
+        else:
+            base = '匹配'
+    else:
+        # 无案例均 GPA，纯用排名估算
+        if ranking and ranking <= 50:
+            base = '冲刺'
+        elif ranking and ranking >= 150:
+            base = '保底'
+        else:
+            base = '匹配'
+
+    # 排名修正
+    if ranking:
+        idx = _PRIORITY_ORDER.index(base)
+        if ranking <= 50:
+            idx = max(0, idx - 1)   # 向冲刺方向
+        elif ranking >= 150:
+            idx = min(2, idx + 1)   # 向保底方向
+        base = _PRIORITY_ORDER[idx]
+
+    return base
+
 
 def _query_cases(
     undergrad_tier: str,
@@ -224,6 +268,12 @@ def get_case_based_recommendations(
 
         program_list = []
         if school_id_str and school_id_str in programs_by_school:
+            # 计算该学校的优先级（基于 GPA delta + 排名）
+            school_priority = _compute_priority(
+                user_gpa=gpa,
+                avg_gpa=entry["avg_gpa"],
+                ranking=s.ranking if s else None,
+            )
             for item in programs_by_school[school_id_str]:
                 p = Program.query.get(item["program_id"])
                 if p:
@@ -243,6 +293,7 @@ def get_case_based_recommendations(
                         "deadline_25fall": p.deadline_25fall.isoformat() if p.deadline_25fall else None,
                         "program_url": p.program_url,
                         "similarity_score": round(item["score"], 4),
+                        "priority_suggestion": school_priority,
                     })
 
         results.append({

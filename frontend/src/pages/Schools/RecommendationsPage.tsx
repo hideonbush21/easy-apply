@@ -7,7 +7,7 @@ import {
   type RecommendedProgram,
   type ProfileBasedResult,
 } from '@/api/schools'
-import { createApplication } from '@/api/applications'
+import { createApplication, getApplications } from '@/api/applications'
 import { Sparkles, RefreshCw, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, Plus, Check } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -15,6 +15,35 @@ import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 
 type PageStatus = 'loading' | 'none' | 'fresh' | 'stale' | 'generating' | 'error'
+
+// Priority tiers — legend + per-program tag
+// Driven by backend priority_suggestion (GPA delta vs historical avg + ranking)
+export const PRIORITY_TIERS = [
+  {
+    label: '冲刺',
+    desc: 'GPA 低于录取均值 0.2+，或 Top 50 院校',
+    detail: '背景与历史录取有差距，属于拔高选择',
+    bg: '#fff1f2', color: '#be123c', border: '#fecdd3',
+  },
+  {
+    label: '匹配',
+    desc: 'GPA 与录取均值相差 ±0.2 以内',
+    detail: '背景与历史录取相当，胜算较稳',
+    bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe',
+  },
+  {
+    label: '保底',
+    desc: 'GPA 高于录取均值 0.2+，或排名 150+',
+    detail: '与历史录取相比有优势，录取概率较高',
+    bg: '#f0fdf4', color: '#166534', border: '#bbf7d0',
+  },
+]
+
+const PRIORITY_STYLE: Record<string, typeof PRIORITY_TIERS[0]> = {
+  '冲刺': PRIORITY_TIERS[0],
+  '匹配': PRIORITY_TIERS[1],
+  '保底': PRIORITY_TIERS[2],
+}
 
 const MATCH_LEVEL_LABEL: Record<string, string> = {
   exact:         '精确匹配',
@@ -66,6 +95,14 @@ export default function RecommendationsPage() {
   }
 
   useEffect(() => {
+    // 页面挂载时同步拉取已有申请，预填已加入状态
+    getApplications()
+      .then(r => {
+        const ids = new Set(r.data.map((a: { program_id?: string | null }) => a.program_id).filter(Boolean) as string[])
+        setAddedPrograms(ids)
+      })
+      .catch(() => null)
+
     const stateAutoGenerate = (location.state as { autoGenerate?: boolean })?.autoGenerate
     const queryAutoGenerate = new URLSearchParams(window.location.search).get('autoGenerate') === 'true'
     if (stateAutoGenerate || queryAutoGenerate) {
@@ -94,7 +131,7 @@ export default function RecommendationsPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl" style={{ animation: 'fade-in 0.3s ease-out' }}>
+    <div className="p-8" style={{ animation: 'fade-in 0.3s ease-out' }}>
       {/* Header */}
       <div className="mb-5 flex items-start justify-between">
         <div>
@@ -182,6 +219,24 @@ export default function RecommendationsPage() {
             {result.category && (
               <span className="text-xs" style={{ color: '#6b7280' }}>· 专业大类：{result.category}</span>
             )}
+          </div>
+
+          {/* Priority legend */}
+          <div className="mb-6 flex items-stretch gap-3 flex-wrap">
+            {PRIORITY_TIERS.map(tier => (
+              <div key={tier.label}
+                className="flex items-start gap-2.5 px-4 py-3 rounded-xl flex-1 min-w-[160px]"
+                style={{ background: tier.bg, border: `1px solid ${tier.border}` }}>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full mt-0.5 shrink-0"
+                  style={{ background: tier.color, color: '#fff' }}>
+                  {tier.label}
+                </span>
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: tier.color }}>{tier.desc}</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: tier.color, opacity: 0.75 }}>{tier.detail}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="space-y-4">
@@ -292,7 +347,7 @@ function ProgramRow({ program, isLast, added, onAdd, onViewApplications }: {
   const handleAdd = async () => {
     setAdding(true)
     try {
-      await createApplication({ program_id: program.id })
+      await createApplication({ program_id: program.id, priority: program.priority_suggestion })
       onAdd(program.id)
     } catch (e: unknown) {
       const status = (e as { response?: { status?: number } })?.response?.status
@@ -306,6 +361,7 @@ function ProgramRow({ program, isLast, added, onAdd, onViewApplications }: {
   }
 
   const score = Math.round(program.similarity_score * 100)
+  const tier = PRIORITY_STYLE[program.priority_suggestion] ?? PRIORITY_TIERS[1]
   const ielts = program.ielts_requirement
     ? (typeof program.ielts_requirement === 'object' ? program.ielts_requirement.total : program.ielts_requirement)
     : null
@@ -328,6 +384,10 @@ function ProgramRow({ program, isLast, added, onAdd, onViewApplications }: {
           <span className="text-xs font-semibold px-1.5 py-0.5 rounded"
             style={{ background: '#f0fdf9', color: '#1dd3b0' }}>
             匹配度 {score}%
+          </span>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: tier.bg, color: tier.color, border: `1px solid ${tier.border}` }}>
+            {tier.label}
           </span>
         </div>
         <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: '#6b7280' }}>

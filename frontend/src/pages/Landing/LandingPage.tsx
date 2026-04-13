@@ -6,6 +6,73 @@ import {
   Award, MessageCircle, Link, ExternalLink, Globe, Mail, Menu, X, Check
 } from 'lucide-react'
 
+function FeishuModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(0,0,0,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1rem',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'white', borderRadius: 24,
+          padding: '40px 36px 32px',
+          maxWidth: 360, width: '100%',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.2)',
+          textAlign: 'center', position: 'relative',
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: 16, right: 16,
+            background: '#f3f4f6', border: 'none', borderRadius: '50%',
+            width: 32, height: 32, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#6b7280',
+          }}
+        >
+          <X size={16} />
+        </button>
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 12, margin: '0 auto 12px',
+            background: 'linear-gradient(135deg, #1dd3b0, #10b981)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <MessageCircle size={24} color="white" />
+          </div>
+          <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 4px', color: '#111827' }}>
+            联系我们
+          </h3>
+          <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>
+            扫描二维码，添加飞书联系我们
+          </p>
+        </div>
+
+        <div style={{
+          borderRadius: 16, overflow: 'hidden',
+          border: '1px solid #e5e7eb',
+          marginBottom: 20,
+        }}>
+          <img src="/feishu.jpg" alt="飞书联系二维码" style={{ width: '100%', display: 'block' }} />
+        </div>
+
+        <p style={{ fontSize: 13, color: '#9ca3af', margin: 0, lineHeight: 1.6 }}>
+          工作时间：周一至周五 9:00–18:00<br />
+          我们会在 24 小时内回复您
+        </p>
+      </div>
+    </div>
+  )
+}
+
 /* ─── CSS injected once ─── */
 const landingCSS = `
   .lp-gradient-text {
@@ -142,6 +209,7 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const navRef = useRef<HTMLElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [feishuOpen, setFeishuOpen] = useState(false)
 
   /* inject CSS once */
   useEffect(() => {
@@ -201,6 +269,7 @@ export default function LandingPage() {
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#ffffff', color: '#0a0a0a' }}>
+      {feishuOpen && <FeishuModal onClose={() => setFeishuOpen(false)} />}
 
       {/* ── Navbar ── */}
       <header ref={navRef} style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, transition: 'all 0.3s', background: 'transparent' }}>
@@ -297,7 +366,7 @@ export default function LandingPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '16px 32px', color: 'white', fontWeight: 600, borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 16, boxShadow: '0 8px 20px rgba(29,211,176,0.3)' }}>
                 免费开始使用 <ArrowRight size={20} />
               </button>
-              <button className="lp-hero-btn-secondary"
+              <button className="lp-hero-btn-secondary" onClick={() => setFeishuOpen(true)}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '16px 32px', background: 'white', color: '#0a0a0a', fontWeight: 600, borderRadius: 999, border: '1px solid #e5e7eb', cursor: 'pointer', fontSize: 16 }}>
                 <Play size={20} color="#1dd3b0" /> 了解更多
               </button>
@@ -585,7 +654,7 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <button onClick={() => navigate(plan.cta === '免费开始' ? '/onboarding' : '/register')}
+                <button onClick={() => plan.cta === '免费开始' ? navigate('/onboarding') : setFeishuOpen(true)}
                   style={{
                     width: '100%', padding: '12px 0', borderRadius: 999, fontWeight: 600, cursor: 'pointer', fontSize: 16, border: 'none',
                     ...(plan.highlight
