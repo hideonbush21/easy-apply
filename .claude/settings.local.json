@@ -56,7 +56,9 @@
       "Bash(python3:*)",
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?|sql|json\\)$\")",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(git stash:*)",
+      "Bash(git cherry-pick:*)"
     ]
   }
 }
