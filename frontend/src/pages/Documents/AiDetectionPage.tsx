@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { getAllDocuments } from '@/api/documents'
+import type { DocumentGroup } from '@/api/documents'
 import { humanizeText } from '@/api/sop'
-import type { DocumentGroup } from '@/types'
 import { ChevronDown, Copy, Check, Sparkles, FileText, X } from 'lucide-react'
 
 export default function AiDetectionPage() {
