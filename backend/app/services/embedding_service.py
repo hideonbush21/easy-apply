@@ -143,7 +143,7 @@ def find_similar_programs(
                 try:
                     pipe = r.pipeline(transaction=False)
                     for j, i in enumerate(valid_idx):
-                    pipe.setex(_get_program_redis_key(ids[i]), _ttl_with_jitter(), vecs[i].tobytes())
+                        pipe.setex(_get_program_redis_key(ids[i]), _ttl_with_jitter(), vecs[i].tobytes())
                     pipe.execute()
                 except Exception as e:
                     logger.warning(f"Redis 回写失败: {e}")
