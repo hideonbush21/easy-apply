@@ -2,8 +2,8 @@
 向量化服务：使用 OpenAI text-embedding-3-large API。
 
 缓存策略：
-  按 program_id 缓存单条向量到 Redis（TTL=30天）。
-  warmup.py 在 gunicorn 启动前同步预热全量 programs。
+  按 program_id 缓存单条向量到 Redis（TTL=180天，±7天随机抖动）。
+  warmup_program_vectors() 在 gunicorn 启动后异步预热全量 programs。
 
 推荐时流程：
   1. 从 DB 轻量查询候选学校的 program IDs（不取文本）
@@ -13,6 +13,7 @@
 """
 
 import os
+import random
 import numpy as np
 from typing import Optional
 import logging
@@ -20,13 +21,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 _MODEL_TAG = "te3l"              # text-embedding-3-large 缩写，换模型时修改此处
-_MATRIX_TTL_BASE = 15552000     # Redis TTL 基准：180 天
-_MATRIX_TTL_JITTER = 604800     # 随机抖动上限：±7 天，防止大批量同时过期
+_MATRIX_TTL_BASE = 15552000      # Redis TTL 基准：180 天
+_MATRIX_TTL_JITTER = 604800      # 随机抖动上限：7 天，防止大批量同时过期
 
 
 def _ttl_with_jitter() -> int:
     """返回带随机抖动的 TTL（秒），防止大批量缓存同时过期引发编码风暴。"""
-    import random
     return _MATRIX_TTL_BASE + random.randint(-_MATRIX_TTL_JITTER, _MATRIX_TTL_JITTER)
 
 
@@ -70,6 +70,73 @@ def _build_program_text(program) -> str:
 
 def _get_program_redis_key(program_id) -> str:
     return f"prog:emb:{_MODEL_TAG}:{program_id}"
+
+
+def warmup_program_vectors(batch_sleep: float = 0.0) -> None:
+    """
+    检查并填充所有 programs 的 Redis 向量缓存（公开接口）。
+
+    Args:
+        batch_sleep: 每批次编码后的等待秒数。
+                     后台线程传 1.0（避免与推荐请求竞争 OpenAI 额度），
+                     同步脚本传 0.0（尽快完成）。
+    """
+    import time
+    from app.models.program import Program
+    from app.services.redis_client import get_redis_binary
+
+    r = get_redis_binary()
+    programs = Program.query.all()
+    logger.info(f'[warmup] 共 {len(programs)} 条 programs')
+
+    # pipeline 批量检查，1 次网络 RTT 替代 N 次 exists 调用
+    keys = [_get_program_redis_key(p.id) for p in programs]
+    pipe = r.pipeline(transaction=False)
+    for k in keys:
+        pipe.exists(k)
+    exists_flags = pipe.execute()
+
+    to_encode_ids, to_encode_texts = [], []
+    for p, exists in zip(programs, exists_flags):
+        if exists:
+            continue
+        text = _build_program_text(p)
+        if not text.strip():
+            continue
+        to_encode_ids.append(p.id)
+        to_encode_texts.append(text)
+
+    if not to_encode_ids:
+        logger.info('[warmup] 向量缓存已全部就绪，跳过')
+        return
+
+    logger.info(f'[warmup] 开始编码 {len(to_encode_ids)} 条未缓存 programs...')
+    batch_size = 500
+    for i in range(0, len(to_encode_ids), batch_size):
+        batch_ids = to_encode_ids[i:i + batch_size]
+        batch_texts = to_encode_texts[i:i + batch_size]
+        vectors = encode(batch_texts)
+        pipe = r.pipeline(transaction=False)
+        for j, pid in enumerate(batch_ids):
+            pipe.setex(_get_program_redis_key(pid), _ttl_with_jitter(), vectors[j].tobytes())
+        pipe.execute()
+        logger.info(f'[warmup] {min(i + batch_size, len(to_encode_ids))}/{len(to_encode_ids)} 完成')
+        if batch_sleep > 0:
+            time.sleep(batch_sleep)
+
+    logger.info('[warmup] 预热完成')
+
+
+def count_cached_programs(redis_client) -> int:
+    """统计 Redis 中已缓存的 program 向量数量（供 diagnostics 使用）。"""
+    count = 0
+    cursor = 0
+    while True:
+        cursor, batch = redis_client.scan(cursor, match=f'prog:emb:{_MODEL_TAG}:*', count=500)
+        count += len(batch)
+        if cursor == 0:
+            break
+    return count
 
 
 def find_similar_programs(
