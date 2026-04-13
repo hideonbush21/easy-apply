@@ -33,18 +33,10 @@ def diagnostics():
     # 2. Redis 连通性 + 缓存命中数
     try:
         from app.services.redis_client import get_redis_binary
-        from app.services.embedding_service import _get_program_redis_key, _MODEL_TAG
+        from app.services.embedding_service import count_cached_programs
         r = get_redis_binary()
         r.ping()
-        # 用 SCAN 统计已缓存的 program 向量数量（避免 KEYS 被 Redis 代理拒绝）
-        count = 0
-        cursor = 0
-        while True:
-            cursor, batch = r.scan(cursor, match=f'prog:emb:{_MODEL_TAG}:*', count=500)
-            count += len(batch)
-            if cursor == 0:
-                break
-        result['redis'] = {'status': 'ok', 'cached_program_vectors': count}
+        result['redis'] = {'status': 'ok', 'cached_program_vectors': count_cached_programs(r)}
     except Exception as e:
         result['redis'] = {'status': 'error', 'detail': str(e)}
 
