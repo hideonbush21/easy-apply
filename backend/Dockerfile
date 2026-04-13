@@ -11,4 +11,4 @@ COPY . .
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "python migrate.py && gunicorn run:app --bind 0.0.0.0:8080 --workers 1 --timeout 120"]
+CMD ["sh", "-c", "python migrate.py && python warmup.py && gunicorn run:app --bind 0.0.0.0:8080 --workers 1 --timeout 120"]
