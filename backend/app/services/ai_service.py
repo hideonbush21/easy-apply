@@ -67,12 +67,20 @@ _RL_FEW_SHOT_BLOCK = "\n\n---\n\n".join(
 )
 
 
-def generate_recommendation(user_profile: dict, experiences: list, school_name: str, major: str) -> str:
+def generate_recommendation(user_profile: dict, experiences: list, school_name: str, major: str,
+                            recommender_context: dict | None = None) -> str:
     """Call Kimi API to generate an English recommendation letter.
 
     Uses few-shot prompting with real successful recommendation letters to produce
     structurally authentic output with concrete anecdotes rather than generic praise.
+
+    recommender_context (optional):
+        recommender_type:     e.g. "学术导师" / "实习主管"
+        relationship_context: e.g. "大三上学期的计量经济学课程"
+        key_incident:         e.g. "期末项目中独立发现数据集错误并重新建模"
+        quantified_outcome:   e.g. "最终获得A+，全班最高分"
     """
+    ctx = recommender_context or {}
     experience_text = []
     for exp in experiences:
         parts = [f"[{exp.get('type', '')}] {exp.get('title', '')}"]
@@ -88,6 +96,25 @@ def generate_recommendation(user_profile: dict, experiences: list, school_name: 
 
     experiences_str = '\n'.join(experience_text) if experience_text else 'No experience provided'
 
+    # Build recommender context block — only include filled fields
+    recommender_lines = []
+    if ctx.get('recommender_type'):
+        recommender_lines.append(f"- Recommender type: {ctx['recommender_type']}")
+    if ctx.get('relationship_context'):
+        recommender_lines.append(f"- How recommender knows the student: {ctx['relationship_context']}")
+    if ctx.get('key_incident'):
+        recommender_lines.append(f"- Key incident the recommender witnessed (USE THIS AS THE CORE OF PARAGRAPH 2): {ctx['key_incident']}")
+    if ctx.get('quantified_outcome'):
+        recommender_lines.append(f"- Quantified outcome / achievement: {ctx['quantified_outcome']}")
+
+    recommender_block = ''
+    if recommender_lines:
+        recommender_block = (
+            "\nRecommender-Provided Context (HIGH PRIORITY — weave these details into the letter naturally):\n"
+            + '\n'.join(recommender_lines)
+            + '\n'
+        )
+
     prompt = f"""You are a senior study abroad application consultant. Your task is to write a highly personalized recommendation letter.
 
 First, study these {len(_RL_EXAMPLES)} real recommendation letters that were used in successful study abroad applications. Learn their structure, tone, and — most importantly — their use of specific incidents rather than generic praise:
@@ -97,10 +124,10 @@ First, study these {len(_RL_EXAMPLES)} real recommendation letters that were use
 ---
 
 Now write a NEW recommendation letter for the student below applying to {major} at {school_name}.
-
+{recommender_block}
 STRUCTURAL RULES (derived from the examples above):
-1. Paragraph 1 — Recommender self-introduction + how/when they know the student (1–2 sentences)
-2. Paragraph 2 — Academic or professional performance with AT LEAST ONE specific, concrete incident or story (e.g., a specific project, a surprising behavior, a measurable achievement). Do NOT just say "she performed well" — show a scene.
+1. Paragraph 1 — Recommender self-introduction + how/when they know the student (use the recommender context above if provided)
+2. Paragraph 2 — Academic or professional performance with AT LEAST ONE specific, concrete incident or story. If a key incident is provided above, build paragraph 2 around it. Do NOT just say "she performed well" — show a scene.
 3. Paragraph 3 — Character and soft skills (work ethic, initiative, communication), grounded in observable behavior
 4. Paragraph 4 — Strong closing recommendation, express confidence, offer to be contacted
 
@@ -117,7 +144,7 @@ Student Background:
 - Undergraduate Major: {user_profile.get('current_major', '')}
 - GPA: {user_profile.get('gpa', '')}/{user_profile.get('gpa_scale', 4.0)}
 - Language Scores: {user_profile.get('language_scores', {})}
-- Key Experiences (use these as the basis for your concrete story in paragraph 2):
+- Key Experiences (use these as supplementary detail):
 {experiences_str}
 
 Write the full recommendation letter now. Do not include any preamble or explanation — output the letter only."""

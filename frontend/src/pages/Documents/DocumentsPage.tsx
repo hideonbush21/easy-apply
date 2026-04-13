@@ -4,6 +4,7 @@ import { getAllDocuments, updateDocument } from '@/api/documents'
 import type { DocumentGroup } from '@/api/documents'
 import { generateSop } from '@/api/sop'
 import { generateRecommendation } from '@/api/recommendations'
+import type { RecommendationContext } from '@/api/recommendations'
 import type { Application } from '@/types'
 import { Tabs } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
@@ -18,10 +19,183 @@ import {
   Sparkles,
   Check,
   GraduationCap,
+  X,
 } from 'lucide-react'
 import html2pdf from 'html2pdf.js'
 import { Document, Packer, Paragraph, TextRun } from 'docx'
 import { saveAs } from 'file-saver'
+
+// ── 推荐信引导问答 Modal ───────────────────────────────────────────
+const RECOMMENDER_TYPES = [
+  { value: '学术导师 / 课程教授', label: '学术导师 / 课程教授' },
+  { value: '科研导师', label: '科研导师' },
+  { value: '实习 / 工作主管', label: '实习 / 工作主管' },
+  { value: '高中老师', label: '高中老师' },
+  { value: '其他', label: '其他' },
+]
+
+function RecommendationContextModal({
+  onConfirm,
+  onSkip,
+  onClose,
+}: {
+  onConfirm: (ctx: RecommendationContext) => void
+  onSkip: () => void
+  onClose: () => void
+}) {
+  const [form, setForm] = useState<RecommendationContext>({
+    recommender_type: '',
+    relationship_context: '',
+    key_incident: '',
+    quantified_outcome: '',
+  })
+  const [customRecommenderType, setCustomRecommenderType] = useState('')
+
+  const set = (k: keyof RecommendationContext, v: string) =>
+    setForm(f => ({ ...f, [k]: v }))
+
+  // 提交时，若选了"其他"则用自定义文本替换
+  const buildFinalContext = (): RecommendationContext => ({
+    ...form,
+    recommender_type: form.recommender_type === '其他' && customRecommenderType.trim()
+      ? customRecommenderType.trim()
+      : form.recommender_type,
+  })
+
+  const inputCls = 'w-full rounded-xl border border-gray-200 bg-white text-sm text-gray-900 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all'
+  const labelCls = 'block text-sm font-medium mb-1.5 text-gray-700'
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 520, boxShadow: '0 24px 60px rgba(0,0,0,0.18)', overflow: 'hidden' }}
+      >
+        {/* Header */}
+        <div style={{ background: 'linear-gradient(135deg,#1dd3b0,#10b981)', padding: '20px 24px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <BookOpen size={18} color="white" />
+              </div>
+              <div>
+                <p style={{ color: 'white', fontWeight: 700, fontSize: 15, margin: 0 }}>生成高质量推荐信</p>
+                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, margin: 0 }}>提供推荐人信息，AI 将生成更真实的推荐信</p>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={15} color="white" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Q1 */}
+          <div>
+            <label className={labelCls}>
+              <span style={{ color: '#1dd3b0', fontWeight: 700, marginRight: 6 }}>Q1</span>
+              这封推荐信由谁来写？
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {RECOMMENDER_TYPES.map(t => (
+                <button
+                  key={t.value}
+                  onClick={() => set('recommender_type', t.value)}
+                  style={{
+                    padding: '5px 14px', borderRadius: 999, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s',
+                    background: form.recommender_type === t.value ? '#1dd3b0' : '#f9fafb',
+                    color: form.recommender_type === t.value ? '#fff' : '#374151',
+                    border: form.recommender_type === t.value ? '1.5px solid #1dd3b0' : '1.5px solid #e5e7eb',
+                    fontWeight: form.recommender_type === t.value ? 600 : 400,
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {form.recommender_type === '其他' && (
+              <input
+                className={inputCls}
+                style={{ marginTop: 10 }}
+                value={customRecommenderType}
+                onChange={e => setCustomRecommenderType(e.target.value)}
+                placeholder="请说明推荐人身份，如：社区志愿项目负责人 / 竞赛指导老师"
+                autoFocus
+              />
+            )}
+          </div>
+
+          {/* Q2 */}
+          <div>
+            <label className={labelCls}>
+              <span style={{ color: '#1dd3b0', fontWeight: 700, marginRight: 6 }}>Q2</span>
+              推荐人在什么场景下认识你的？
+            </label>
+            <input
+              className={inputCls}
+              value={form.relationship_context}
+              onChange={e => set('relationship_context', e.target.value)}
+              placeholder="如：大三上学期的计量经济学课程 / 2023年暑期在普华永道的实习项目"
+            />
+          </div>
+
+          {/* Q3 */}
+          <div>
+            <label className={labelCls}>
+              <span style={{ color: '#1dd3b0', fontWeight: 700, marginRight: 6 }}>Q3</span>
+              有没有一件推荐人亲眼目睹、印象深刻的事？
+            </label>
+            <textarea
+              className={inputCls}
+              rows={3}
+              value={form.key_incident}
+              onChange={e => set('key_incident', e.target.value)}
+              placeholder="如：我在期末项目中独立发现了数据集的系统性偏差，并在两天内重新建模，最终结论被用于正式报告"
+              style={{ resize: 'none' }}
+            />
+          </div>
+
+          {/* Q4 */}
+          <div>
+            <label className={labelCls}>
+              <span style={{ color: '#1dd3b0', fontWeight: 700, marginRight: 6 }}>Q4</span>
+              这段经历中有什么可以量化的成果？
+            </label>
+            <input
+              className={inputCls}
+              value={form.quantified_outcome}
+              onChange={e => set('quantified_outcome', e.target.value)}
+              placeholder="如：获得A+，全班最高分 / 团队竞赛全国第二 / 论文发表于核心期刊"
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '12px 24px 20px', display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #f3f4f6' }}>
+          <button
+            onClick={onSkip}
+            style={{ padding: '9px 20px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#6b7280', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+          >
+            跳过，直接生成
+          </button>
+          <button
+            onClick={() => onConfirm(buildFinalContext())}
+            style={{ padding: '9px 24px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#1dd3b0,#10b981)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(29,211,176,0.3)' }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Sparkles size={14} />
+              开始生成
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const TABS = [
   { key: 'sop', label: '申请信 (SoP)' },
@@ -41,6 +215,7 @@ export default function DocumentsPage() {
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [toast, setToast] = useState('')
+  const [showRLModal, setShowRLModal] = useState(false)
   const originalContentRef = useRef('')
 
   // Fetch documents on mount
@@ -151,14 +326,23 @@ export default function DocumentsPage() {
   }
 
   // Generate
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
+    if (!selectedAppId) return
+    if (activeTab === 'recommendation') {
+      setShowRLModal(true)  // 推荐信：先弹问答 modal
+    } else {
+      doGenerate()          // SoP：直接生成
+    }
+  }
+
+  const doGenerate = async (ctx?: RecommendationContext) => {
     if (!selectedAppId) return
     setGenerating(true)
     try {
       if (activeTab === 'sop') {
         await generateSop(selectedAppId)
       } else {
-        await generateRecommendation(selectedAppId)
+        await generateRecommendation(selectedAppId, ctx)
       }
       await fetchDocuments()
       window.dispatchEvent(new Event('documents-updated'))
@@ -240,6 +424,15 @@ export default function DocumentsPage() {
 
   return (
     <div className="flex h-screen" style={{ animation: 'fade-in 0.3s ease-out' }}>
+      {/* 推荐信引导问答 Modal */}
+      {showRLModal && (
+        <RecommendationContextModal
+          onConfirm={(ctx) => { setShowRLModal(false); doGenerate(ctx) }}
+          onSkip={() => { setShowRLModal(false); doGenerate() }}
+          onClose={() => setShowRLModal(false)}
+        />
+      )}
+
       {/* Toast */}
       {toast && (
         <div
