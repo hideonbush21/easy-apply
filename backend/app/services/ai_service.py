@@ -10,8 +10,69 @@ def _has_cjk(text: str) -> bool:
     return bool(_CJK_PATTERN.search(text))
 
 
+# ── Few-shot examples extracted from real successful recommendation letters ──
+# Selected for structural quality: specific incident + strong narrative arc
+_RL_EXAMPLES = [
+    # Example 1: Academic professor with very specific story (student read optional papers proactively)
+    """\
+To whom it may concern,
+
+As a professor and the Dean of School of Mathematics and Statistics, I am writing with pleasure to recommend this excellent student for admission to your respected program.
+
+I have known him since he attended the course Probability Theory under my instruction. He is one of the excellent students I have taught, smart, creative and modest. As the most active one in the class, he always can bring new ideas for discussion. He has been keeping as the top 10% of the class throughout all quizzes and projects.
+
+Of all his strengths, the one impressed me most is that he is a serious learner. At the beginning of the class, I distributed a list of optional papers for reading which could expand students' knowledge in this subject. I did not expect any one would start to read them before the midterm exam. However, only one week later, he brought a list of questions about the papers — he had already finished half of them. Some of the readings which contain advanced concepts and models are really hard for undergraduates to understand, but he still devoted quite a lot of time to figure them out. He told me he would like to learn more and not just be limited to the textbook.
+
+I firmly believe that he has the qualities to be an excellent graduate student. I therefore strongly recommend him to pursue your esteemed program. If further information is required, please do not hesitate to contact me.
+
+Yours sincerely,
+Professor, School of Mathematics
+[University Name]""",
+
+    # Example 2: Industry supervisor with specific incident (employee submitted improvement report after crisis)
+    """\
+To Whom It May Concern,
+
+It is my great pleasure to recommend my colleague, who just graduated from university as an honored student. When I interviewed her in June, I was impressed with her academic achievement and strong communication skills. Though I knew she would apply for advanced study and would not stay long, I was happy to offer her a position because of her serious working attitude and strong willingness to learn.
+
+Under my supervision, she grasped her daily work quickly. Whenever I gave her an assignment, she would turn in a satisfactory report on time. There were several occasions which required overtime work; she accepted these without any complaints. Most impressively, when our computer system broke down, she had to confirm all transactions one by one by calling customers. The very next day, she submitted a three-page report outlining how to effectively improve working efficiency if the computer system failed again. That level of initiative — turning a crisis into a process improvement — is rare even among experienced staff.
+
+She was an excellent employee with a good personality and strong communication skills. Though only working for four months, she became one of the favorite persons in our group.
+
+Based on my observation, I believe she would be an excellent student in your program. I would strongly recommend her without any reservation.
+
+Sincerely,
+[Name], Associate Director
+[Institution]""",
+
+    # Example 3: Academic professor with research achievement (student published in national journal)
+    """\
+To whom it may concern,
+
+I am a professor at the School of Management. It is my great pleasure to recommend this student for your esteemed graduate program. Her natural talent for engaging in management research is obvious for all to see.
+
+I made acquaintance with her in my course of Micro Economics. From the very beginning, she impressed me with her earnest study attitude. In my opinion, field investigation is an indispensable part of management education. With an interest in exploring the relation between traditional culture and modern economy, she took a historic hall as a real case for seeking connections among traditional art, old urban districts, and modern economic development. I had not expected that she could fulfill that research, but after a whole summer vacation's field investigation — fully analyzing statistics collected from her survey — she accomplished the research and published her paper in a national-level periodical. This kind of academic achievement was rare among students at her age.
+
+Although she ranked first among more than 100 students in her department, she did not cease moving forward. She participated in diversified campus activities and, leading a team in a major management competition, demonstrated outstanding leadership and analytical ability, winning second place in the preliminary round.
+
+I firmly believe she is academically qualified for your graduate programme and well-prepared for professional education. I recommend her without hesitation.
+
+Sincerely yours,
+Associate Professor, School of Management
+[University Name]""",
+]
+
+_RL_FEW_SHOT_BLOCK = "\n\n---\n\n".join(
+    f"[EXAMPLE {i+1}]\n{ex}" for i, ex in enumerate(_RL_EXAMPLES)
+)
+
+
 def generate_recommendation(user_profile: dict, experiences: list, school_name: str, major: str) -> str:
-    """Call Kimi API to generate an English recommendation letter."""
+    """Call Kimi API to generate an English recommendation letter.
+
+    Uses few-shot prompting with real successful recommendation letters to produce
+    structurally authentic output with concrete anecdotes rather than generic praise.
+    """
     experience_text = []
     for exp in experiences:
         parts = [f"[{exp.get('type', '')}] {exp.get('title', '')}"]
@@ -27,26 +88,39 @@ def generate_recommendation(user_profile: dict, experiences: list, school_name: 
 
     experiences_str = '\n'.join(experience_text) if experience_text else 'No experience provided'
 
-    prompt = f"""You are a senior study abroad application consultant. Based on the student's background below, write a personalized recommendation letter for their application to {major} at {school_name}.
+    prompt = f"""You are a senior study abroad application consultant. Your task is to write a highly personalized recommendation letter.
 
-IMPORTANT: The entire letter MUST be written in English only. Do not include any Chinese or other non-English characters.
+First, study these {len(_RL_EXAMPLES)} real recommendation letters that were used in successful study abroad applications. Learn their structure, tone, and — most importantly — their use of specific incidents rather than generic praise:
+
+{_RL_FEW_SHOT_BLOCK}
+
+---
+
+Now write a NEW recommendation letter for the student below applying to {major} at {school_name}.
+
+STRUCTURAL RULES (derived from the examples above):
+1. Paragraph 1 — Recommender self-introduction + how/when they know the student (1–2 sentences)
+2. Paragraph 2 — Academic or professional performance with AT LEAST ONE specific, concrete incident or story (e.g., a specific project, a surprising behavior, a measurable achievement). Do NOT just say "she performed well" — show a scene.
+3. Paragraph 3 — Character and soft skills (work ethic, initiative, communication), grounded in observable behavior
+4. Paragraph 4 — Strong closing recommendation, express confidence, offer to be contacted
+
+LANGUAGE RULES:
+- Write entirely in English — no Chinese characters permitted
+- Use varied sentence lengths: mix short punchy sentences with longer complex ones
+- Avoid AI clichés: "It is worth noting", "Furthermore", "In conclusion", "Needless to say"
+- Use active voice for specific incidents; the recommender should sound like they genuinely remember this student
+- Length: 450–650 words
 
 Student Background:
-- Name: {user_profile.get('name', 'Applicant')}
+- Name: {user_profile.get('name', 'the applicant')}
 - Undergraduate Institution: {user_profile.get('home_institution', '')} ({user_profile.get('institution_tier', '')})
-- Major: {user_profile.get('current_major', '')}
+- Undergraduate Major: {user_profile.get('current_major', '')}
 - GPA: {user_profile.get('gpa', '')}/{user_profile.get('gpa_scale', 4.0)}
 - Language Scores: {user_profile.get('language_scores', {})}
-- Key Experiences:
+- Key Experiences (use these as the basis for your concrete story in paragraph 2):
 {experiences_str}
 
-Requirements:
-1. Use formal academic recommendation letter format
-2. Highlight the student's academic abilities and professional potential
-3. Reference specific experiences and achievements
-4. Explain why the student is a strong fit for this program and institution
-5. Length: 500-800 words
-6. Write entirely in English — no Chinese characters permitted"""
+Write the full recommendation letter now. Do not include any preamble or explanation — output the letter only."""
 
     api_key = os.getenv('KIMI_API_KEY', '')
     if not api_key:
