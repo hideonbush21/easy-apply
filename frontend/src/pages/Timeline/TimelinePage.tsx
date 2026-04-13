@@ -191,7 +191,7 @@ export default function TimelinePage() {
       {/* ── Header ── */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, height: 54, zIndex: 40,
-        background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)',
+        background: 'rgba(255,255,255,0.95)',
         borderBottom: '1px solid #e5e7eb',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 28px',
@@ -374,7 +374,7 @@ export default function TimelinePage() {
             {/* backdrop */}
             <div onClick={() => setDetailId(null)} style={{
               position: 'fixed', inset: 0,
-              background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(3px)',
+              background: 'rgba(0,0,0,0.3)',
               zIndex: 50,
               opacity: open ? 1 : 0,
               visibility: open ? 'visible' : 'hidden',
