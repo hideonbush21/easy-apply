@@ -15,8 +15,8 @@ import { Spinner } from '@/components/ui/Spinner'
 const TABS = [
   { key: '基础信息', label: '基础信息' },
   { key: '成绩', label: '成绩' },
-  { key: '目标', label: '目标' },
   { key: '经历', label: '经历' },
+  { key: '目标', label: '目标' },
 ]
 
 const TIERS = [
@@ -34,7 +34,7 @@ const DEGREE_TYPES = [
   { value: 'bachelor', label: '本科' },
 ]
 
-const COUNTRIES = ['英国', '澳大利亚', '中国香港', '新加坡', '中国澳门']
+const COUNTRIES = ['英国', '美国', '澳大利亚', '中国香港', '新加坡', '中国澳门']
 
 const MAJORS_LIST = [
   '计算机科学', '软件工程', '人工智能', '数据科学', '网络安全',
@@ -226,14 +226,6 @@ export default function ProfilePage() {
                     onChange={e => setForm(f => ({ ...f, current_major: e.target.value }))}
                     placeholder="如：计算机科学"
                   />
-                  <Select
-                    label="申请学位"
-                    value={form.degree_type || ''}
-                    onChange={e => setForm(f => ({ ...f, degree_type: e.target.value as UserProfile['degree_type'] }))}
-                  >
-                    <option value="">请选择</option>
-                    {DEGREE_TYPES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
-                  </Select>
                 </div>
               )}
 
@@ -278,6 +270,16 @@ export default function ProfilePage() {
 
               {activeTab === '目标' && (
                 <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Select
+                      label="申请学位"
+                      value={form.degree_type || ''}
+                      onChange={e => setForm(f => ({ ...f, degree_type: e.target.value as UserProfile['degree_type'] }))}
+                    >
+                      <option value="">请选择</option>
+                      {DEGREE_TYPES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                    </Select>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium mb-3" style={{ color: '#374151' }}>目标国家</label>
                     <div className="flex gap-3 flex-wrap">

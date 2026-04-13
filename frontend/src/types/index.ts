@@ -107,3 +107,57 @@ export interface PaginatedResponse<T> {
   per_page: number
   pages: number
 }
+
+export type EventCategory =
+  | 'deadline'
+  | 'exam'
+  | 'interview'
+  | 'milestone'
+  | 'reminder'
+  | 'submission'
+  | 'decision'
+  | 'task'
+  | 'custom'
+
+export interface CalendarEvent {
+  id: string
+  user_id: string
+  title: string
+  is_all_day: boolean
+  start_date: string        // YYYY-MM-DD
+  start_time?: string | null  // HH:MM
+  end_date?: string | null
+  end_time?: string | null
+  timezone: string
+  category: EventCategory
+  application_id?: string | null
+  origin: 'manual' | 'email_import' | 'chat_command'
+  color?: string | null
+  editable_by_user: boolean
+  deletable_by_user: boolean
+  manual_completed: boolean
+  manual_completed_at?: string | null
+  user_notes: string
+  status_change_from?: string | null
+  status_change_to?: string | null
+  status_change_confidence?: number | null
+  status_change_auto_executed?: boolean
+  created_at: string
+  updated_at?: string
+  completed_at?: string | null
+}
+
+export interface CreateEventPayload {
+  title: string
+  is_all_day: boolean
+  start_date: string
+  start_time?: string
+  end_date?: string
+  end_time?: string
+  timezone?: string
+  category: EventCategory
+  application_id?: string
+  color?: string
+  user_notes?: string
+  status_change_to?: string
+}

@@ -15,6 +15,8 @@ import {
   ChevronDown,
   ScanSearch,
   MailSearch,
+  Bug,
+  Terminal,
 } from 'lucide-react'
 
 export default function Layout() {
@@ -181,6 +183,26 @@ export default function Layout() {
               </span>
             </div>
           </div>
+
+          {/* DB Debug — 仅 nickname=aaaaaa 可见 */}
+          {user?.nickname === 'aaaaaa' && (
+            <NavLink to="/dashboard/db-debug" end
+              className={navLinkStyle}
+              style={navLinkInlineStyle}
+            >
+              <Bug size={16} />
+              数据库调试
+            </NavLink>
+          )}
+          {user?.nickname === 'aaaaaa' && (
+            <NavLink to="/dashboard/backend-logs" end
+              className={navLinkStyle}
+              style={navLinkInlineStyle}
+            >
+              <Terminal size={16} />
+              后端日志
+            </NavLink>
+          )}
         </nav>
 
         {/* User */}

@@ -17,6 +17,8 @@ import DocumentsPage from '@/pages/Documents/DocumentsPage'
 import AiDetectionPage from '@/pages/Documents/AiDetectionPage'
 import AdminDashboard from '@/pages/Admin/AdminDashboard'
 import UserManagePage from '@/pages/Admin/UserManagePage'
+import DbDebugPage from '@/pages/Debug/DbDebugPage'
+import BackendLogsPage from '@/pages/Debug/BackendLogsPage'
 
 export default function App() {
   return (
@@ -64,6 +66,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="db-debug" element={<DbDebugPage />} />
+          <Route path="backend-logs" element={<BackendLogsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

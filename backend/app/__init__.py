@@ -24,6 +24,10 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
     app.url_map.strict_slashes = False
 
+    # 挂载内存日志采集器（供 debug 面板使用）
+    from app.services.log_collector import install_log_handler
+    install_log_handler()
+
     db.init_app(app)
 
     raw_origins = os.getenv('ALLOWED_ORIGINS', '*')

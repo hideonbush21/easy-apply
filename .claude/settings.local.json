@@ -56,7 +56,16 @@
       "Bash(python3:*)",
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?|sql|json\\)$\")",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(brew --version)",
+      "Bash(find /Users/mac/Desktop/github/easy-apply/backend -name migrations -o -name *migration*)",
+      "Bash(find /Users/mac/Desktop/github/easy-apply/frontend/src -name *store* -o -name *context* -o -name *provider*)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(xargs ls:*)",
+      "Bash(find /Users/mac/Desktop/github/easy-apply/frontend/src -type f -name *.tsx -o -name *.ts)",
+      "Bash(ls backend/migrations/010* backend/app/models/event.py backend/app/routes/event.py backend/app/services/event_agent/)",
+      "Bash(grep -E \"\\\\.py$|^d\")",
+      "Bash(grep -E \"\\\\.\\(md|txt|json\\)$\")"
     ]
   }
 }
