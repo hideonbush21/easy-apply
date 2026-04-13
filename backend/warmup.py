@@ -4,6 +4,8 @@ Programs 向量缓存预热脚本。
 在 gunicorn 启动之前同步执行，确保所有 program 向量已写入 Redis。
 只对 Redis 中尚未缓存的 program 调用 OpenAI API，已缓存的直接跳过。
 
+预热失败时只记录警告，仍然允许 gunicorn 正常启动（请求路径有按需编码兜底）。
+
 用法（见 Dockerfile）：
     python warmup.py && gunicorn run:app ...
 """
@@ -16,16 +18,23 @@ logger = logging.getLogger(__name__)
 
 
 def run():
-    from app import create_app
-    from app.services.embedding_service import (
-        _build_program_text, _get_program_redis_key, _MATRIX_TTL, encode,
-    )
-    from app.models.program import Program
-    from app.services.redis_client import get_redis_binary
+    # 检查必要环境变量
+    import os
+    missing = [k for k in ('OPENAI_API_KEY', 'REDIS_URL') if not os.environ.get(k)]
+    if missing:
+        logger.warning(f'[warmup] 缺少环境变量 {missing}，跳过预热，gunicorn 正常启动')
+        return
 
-    app = create_app()
-    with app.app_context():
-        try:
+    try:
+        from app import create_app
+        from app.services.embedding_service import (
+            _build_program_text, _get_program_redis_key, _MATRIX_TTL, encode,
+        )
+        from app.models.program import Program
+        from app.services.redis_client import get_redis_binary
+
+        app = create_app()
+        with app.app_context():
             r = get_redis_binary()
             programs = Program.query.all()
             logger.info(f'[warmup] 共 {len(programs)} 条 programs')
@@ -44,7 +53,7 @@ def run():
                 return
 
             logger.info(f'[warmup] 开始编码 {len(to_encode_ids)} 条未缓存 programs...')
-            batch_size = 100
+            batch_size = 500
             for i in range(0, len(to_encode_ids), batch_size):
                 batch_ids = to_encode_ids[i:i + batch_size]
                 batch_texts = to_encode_texts[i:i + batch_size]
@@ -55,9 +64,8 @@ def run():
 
             logger.info('[warmup] 预热完成，启动 gunicorn')
 
-        except Exception as e:
-            logger.error(f'[warmup] 预热失败: {e}')
-            sys.exit(1)
+    except Exception as e:
+        logger.warning(f'[warmup] 预热过程异常（不影响服务启动）: {e}')
 
 
 if __name__ == '__main__':

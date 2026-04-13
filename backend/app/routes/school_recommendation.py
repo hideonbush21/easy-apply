@@ -4,14 +4,64 @@
 POST /api/school-recommendation/case-based     - 手动传参
 POST /api/school-recommendation/profile-based  - 读取当前用户 profile 自动推荐，结果写入 DB
 GET  /api/school-recommendation/my-result      - 读取缓存结果（none/fresh/stale）
+GET  /api/school-recommendation/diagnostics    - 生产环境诊断（无需登录）
 """
 
+import os
 from flask import Blueprint, request, jsonify, g
 from app.extensions import db
 from app.utils.decorators import login_required
 
 school_rec_bp = Blueprint('school_recommendation', __name__, url_prefix='/api/school-recommendation')
 school_rec_bp.strict_slashes = False
+
+
+@school_rec_bp.route('/diagnostics', methods=['GET'])
+def diagnostics():
+    """
+    检查推荐功能的环境依赖状态。无需登录，供快速排查生产问题。
+    """
+    result = {}
+
+    # 1. 环境变量
+    result['env'] = {
+        'OPENAI_API_KEY': 'set' if os.environ.get('OPENAI_API_KEY') else 'MISSING',
+        'REDIS_URL':      'set' if os.environ.get('REDIS_URL') else 'MISSING',
+        'DATABASE_URL':   'set' if os.environ.get('DATABASE_URL') else 'MISSING',
+    }
+
+    # 2. Redis 连通性 + 缓存命中数
+    try:
+        from app.services.redis_client import get_redis_binary
+        from app.services.embedding_service import _get_program_redis_key, _MODEL_TAG
+        r = get_redis_binary()
+        r.ping()
+        # 统计已缓存的 program 向量数量
+        keys = r.keys(f'prog:emb:{_MODEL_TAG}:*')
+        result['redis'] = {'status': 'ok', 'cached_program_vectors': len(keys)}
+    except Exception as e:
+        result['redis'] = {'status': 'error', 'detail': str(e)}
+
+    # 3. 数据库 + programs 总数
+    try:
+        from app.models.program import Program
+        total = Program.query.count()
+        result['database'] = {'status': 'ok', 'total_programs': total}
+    except Exception as e:
+        result['database'] = {'status': 'error', 'detail': str(e)}
+
+    # 4. OpenAI 连通性（只测试 client 初始化，不发真实请求）
+    try:
+        if os.environ.get('OPENAI_API_KEY'):
+            from openai import OpenAI
+            OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+            result['openai'] = {'status': 'client_ok'}
+        else:
+            result['openai'] = {'status': 'skipped_no_key'}
+    except Exception as e:
+        result['openai'] = {'status': 'error', 'detail': str(e)}
+
+    return jsonify(result)
 
 VALID_TIERS = {"985", "211", "双非", "C9", "海外院校"}
 VALID_COUNTRIES = {"英国", "美国", "澳大利亚", "中国香港", "新加坡"}
