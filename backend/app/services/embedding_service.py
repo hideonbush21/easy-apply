@@ -2,8 +2,14 @@
 向量化服务：使用 OpenAI text-embedding-3-large API。
 
 缓存策略：
-  按 program_id 缓存单条向量到 Redis（TTL=24h）。
-  推荐时只对候选学校的 programs 编码，避免全量矩阵导致的超时和内存溢出。
+  按 program_id 缓存单条向量到 Redis（TTL=30天）。
+  warmup.py 在 gunicorn 启动前同步预热全量 programs。
+
+推荐时流程：
+  1. 从 DB 轻量查询候选学校的 program IDs（不取文本）
+  2. Redis pipeline 批量加载向量（单次 RTT）
+  3. 仅对 Redis 未命中（TTL 过期）的 program 调 OpenAI 编码
+  4. 对 query_text 调 1 次 OpenAI 编码
 """
 
 import os
@@ -13,8 +19,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-_MODEL_TAG = "te3l"          # text-embedding-3-large 缩写，换模型时修改此处
-_MATRIX_TTL = 86400          # Redis TTL：24h
+_MODEL_TAG = "te3l"       # text-embedding-3-large 缩写，换模型时修改此处
+_MATRIX_TTL = 2592000     # Redis TTL：30 天
 
 
 def _get_client():
@@ -39,15 +45,6 @@ def encode(texts: list[str]) -> np.ndarray:
     vectors = np.array(all_vectors, dtype=np.float32)
     norms = np.linalg.norm(vectors, axis=1, keepdims=True)
     return vectors / np.maximum(norms, 1e-10)
-
-
-def cosine_similarity_batch(query_vec: np.ndarray, matrix: np.ndarray) -> np.ndarray:
-    """
-    query_vec: shape (dim,)
-    matrix:    shape (n, dim)，已归一化
-    返回: shape (n,) 相似度分数
-    """
-    return matrix @ query_vec
 
 
 def _build_program_text(program) -> str:
@@ -76,69 +73,87 @@ def find_similar_programs(
     """
     在指定学校范围内，找和 query_text 最相似的 top_k_per_school 个 program。
 
-    只对候选学校的 programs 编码（而非全表），避免全量矩阵导致的超时和内存溢出。
-    单个 program 向量按 program_id 缓存在 Redis（TTL=24h），避免重复调用 OpenAI。
+    流程：
+      1. DB 轻量查询：只取候选学校的 program ID + school_id
+      2. Redis pipeline 批量加载向量（单次网络 RTT）
+      3. 仅对未命中（TTL 过期兜底）的 program 重新编码并回写 Redis
+      4. 对 query_text 调 1 次 OpenAI 编码（正常路径唯一的 AI 调用）
     """
     from collections import defaultdict
     from app.models.program import Program
 
     school_id_strs = {str(sid) for sid in school_id_set}
 
-    # 只查候选学校的 programs
-    programs = Program.query.filter(Program.school_id.in_(school_id_set)).all()
-    if not programs:
+    # Step 1: 轻量查询，只取 id 和 school_id（不拉文本字段）
+    rows = (
+        Program.query
+        .filter(Program.school_id.in_(school_id_set))
+        .with_entities(Program.id, Program.school_id)
+        .all()
+    )
+    if not rows:
         return []
 
-    ids, sids, texts = [], [], []
-    for p in programs:
-        text = _build_program_text(p)
-        if not text.strip():
-            logger.warning(f"Program id={p.id} 文本为空，跳过向量化")
-            continue
-        ids.append(p.id)
-        sids.append(str(p.school_id))
-        texts.append(text)
+    ids = [r[0] for r in rows]
+    sids = [str(r[1]) for r in rows]
 
-    if not ids:
-        return []
-
-    # 从 Redis 批量加载已缓存的向量
-    vecs: list[Optional[np.ndarray]] = [None] * len(ids)
+    # Step 2: Redis pipeline 批量 GET
     r = None
+    vecs: list[Optional[np.ndarray]] = [None] * len(ids)
     try:
         from app.services.redis_client import get_redis_binary
         r = get_redis_binary()
-        for i, pid in enumerate(ids):
-            raw = r.get(_get_program_redis_key(pid))
+        pipe = r.pipeline(transaction=False)
+        for pid in ids:
+            pipe.get(_get_program_redis_key(pid))
+        raw_list = pipe.execute()
+        for i, raw in enumerate(raw_list):
             if raw:
                 vecs[i] = np.frombuffer(raw, dtype=np.float32).copy()
     except Exception as e:
-        logger.warning(f"Redis 读取 program 向量失败，降级为全量编码: {e}")
+        logger.warning(f"Redis 批量读取失败: {e}")
         r = None
 
-    # 批量编码未命中的 programs
+    # Step 3: 编码 Redis 未命中的 programs（TTL 过期兜底）
     miss_idx = [i for i, v in enumerate(vecs) if v is None]
     if miss_idx:
-        miss_texts = [texts[i] for i in miss_idx]
-        encoded = encode(miss_texts)
-        for j, i in enumerate(miss_idx):
-            vecs[i] = encoded[j]
-        if r is not None:
-            try:
-                for j, i in enumerate(miss_idx):
-                    r.setex(_get_program_redis_key(ids[i]), _MATRIX_TTL, vecs[i].tobytes())
-            except Exception as e:
-                logger.warning(f"Redis 写入 program 向量失败: {e}")
+        logger.warning(f"[embedding] {len(miss_idx)} 条 program 向量未命中 Redis，重新编码")
+        miss_pids = [ids[i] for i in miss_idx]
+        miss_programs = Program.query.filter(Program.id.in_(miss_pids)).all()
+        pid_to_text = {p.id: _build_program_text(p) for p in miss_programs}
 
-    # 编码 query
+        valid_miss = [(i, pid_to_text.get(ids[i], '')) for i in miss_idx]
+        valid_miss = [(i, t) for i, t in valid_miss if t.strip()]
+
+        if valid_miss:
+            valid_idx = [x[0] for x in valid_miss]
+            valid_texts = [x[1] for x in valid_miss]
+            encoded = encode(valid_texts)
+            for j, i in enumerate(valid_idx):
+                vecs[i] = encoded[j]
+
+            if r is not None:
+                try:
+                    pipe = r.pipeline(transaction=False)
+                    for j, i in enumerate(valid_idx):
+                        pipe.setex(_get_program_redis_key(ids[i]), _MATRIX_TTL, vecs[i].tobytes())
+                    pipe.execute()
+                except Exception as e:
+                    logger.warning(f"Redis 回写失败: {e}")
+
+    # Step 4: 编码 query（唯一的正常路径 OpenAI 调用）
     query_vec = encode([query_text])[0]
 
-    # 矩阵乘法计算相似度
-    matrix = np.stack(vecs)  # shape (n, dim)
+    # 过滤掉向量仍为 None 的（文本为空的 program）
+    valid = [(ids[i], sids[i], vecs[i]) for i in range(len(ids)) if vecs[i] is not None]
+    if not valid:
+        return []
+
+    matrix = np.stack([v for _, _, v in valid])
     scores: np.ndarray = matrix @ query_vec
 
     school_best: dict[str, list] = defaultdict(list)
-    for i, (pid, sid) in enumerate(zip(ids, sids)):
+    for i, (pid, sid, _) in enumerate(valid):
         if sid not in school_id_strs:
             continue
         school_best[sid].append((float(scores[i]), pid))

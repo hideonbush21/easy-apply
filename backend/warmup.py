@@ -53,7 +53,7 @@ def run():
                 return
 
             logger.info(f'[warmup] 开始编码 {len(to_encode_ids)} 条未缓存 programs...')
-            batch_size = 100
+            batch_size = 500
             for i in range(0, len(to_encode_ids), batch_size):
                 batch_ids = to_encode_ids[i:i + batch_size]
                 batch_texts = to_encode_texts[i:i + batch_size]
