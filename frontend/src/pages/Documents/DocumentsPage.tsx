@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react'
 import html2pdf from 'html2pdf.js'
+import DOMPurify from 'dompurify'
 import { Document, Packer, Paragraph, TextRun } from 'docx'
 import { saveAs } from 'file-saver'
 
@@ -358,7 +359,7 @@ export default function DocumentsPage() {
   // Export PDF
   const exportPdf = () => {
     const element = document.createElement('div')
-    element.innerHTML = editorContent
+    element.innerHTML = DOMPurify.sanitize(editorContent)
     element.style.padding = '40px'
     element.style.fontFamily = 'serif'
     element.style.fontSize = '12pt'
@@ -377,7 +378,7 @@ export default function DocumentsPage() {
   // Export Word
   const exportDocx = async () => {
     const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = editorContent
+    tempDiv.innerHTML = DOMPurify.sanitize(editorContent)
     const paragraphs = Array.from(tempDiv.querySelectorAll('p, h1, h2, h3, li, blockquote'))
       .map(el => new Paragraph({
         children: [new TextRun({ text: el.textContent || '', size: 24 })],

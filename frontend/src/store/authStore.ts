@@ -20,12 +20,12 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       setAuth: (token, user) => {
-        localStorage.setItem('access_token', token)
         set({ token, user })
       },
       logout: () => {
-        localStorage.removeItem('access_token')
         set({ token: null, user: null })
+        // 彻底清除 persist 存储，确保无残留
+        localStorage.removeItem('auth-storage')
       },
     }),
     { name: 'auth-storage' }

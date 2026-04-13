@@ -1,6 +1,6 @@
 import datetime
 import uuid
-from flask import Blueprint, jsonify, request, g
+from flask import Blueprint, jsonify, request, g, current_app
 from sqlalchemy import text
 from app.extensions import db
 from app.utils.decorators import login_required
@@ -178,7 +178,8 @@ def create_row(table_name):
         return jsonify({'row': _serialize_rows(all_cols, [result])[0]}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 400
+        current_app.logger.error('Debug create_row failed: %s', e)
+        return jsonify({'error': '操作失败，请检查数据格式'}), 400
 
 
 # ── UPDATE ROW ───────────────────────────────────────────────
@@ -241,7 +242,8 @@ def update_row(table_name):
         return jsonify({'row': _serialize_rows(all_cols, [result])[0]})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 400
+        current_app.logger.error('Debug update_row failed: %s', e)
+        return jsonify({'error': '操作失败，请检查数据格式'}), 400
 
 
 # ── DELETE ROW ───────────────────────────────────────────────
@@ -284,7 +286,8 @@ def delete_row(table_name):
         return jsonify({'message': 'deleted', 'count': result.rowcount})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 400
+        current_app.logger.error('Debug delete_row failed: %s', e)
+        return jsonify({'error': '操作失败'}), 400
 
 
 # ── LOGS ─────────────────────────────────────────────────────

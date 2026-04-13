@@ -66,8 +66,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="db-debug" element={<DbDebugPage />} />
-          <Route path="backend-logs" element={<BackendLogsPage />} />
+          <Route path="db-debug" element={<ProtectedRoute requireAdmin><DbDebugPage /></ProtectedRoute>} />
+          <Route path="backend-logs" element={<ProtectedRoute requireAdmin><BackendLogsPage /></ProtectedRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

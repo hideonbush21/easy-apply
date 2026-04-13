@@ -184,8 +184,8 @@ export default function Layout() {
             </div>
           </div>
 
-          {/* DB Debug — 仅 nickname=aaaaaa 可见 */}
-          {user?.nickname === 'aaaaaa' && (
+          {/* DB Debug — 仅管理员可见 */}
+          {user?.is_admin && (
             <NavLink to="/dashboard/db-debug" end
               className={navLinkStyle}
               style={navLinkInlineStyle}
@@ -194,7 +194,7 @@ export default function Layout() {
               数据库调试
             </NavLink>
           )}
-          {user?.nickname === 'aaaaaa' && (
+          {user?.is_admin && (
             <NavLink to="/dashboard/backend-logs" end
               className={navLinkStyle}
               style={navLinkInlineStyle}

@@ -89,10 +89,15 @@ def get_log_handler() -> InMemoryLogHandler:
 
 def install_log_handler(app_logger: logging.Logger | None = None):
     """将 handler 挂载到 root logger，确保所有日志都被捕获。"""
+    import os
+    is_debug = os.getenv('FLASK_ENV') == 'development' or os.getenv('FLASK_DEBUG') == '1'
+    target_level = logging.DEBUG if is_debug else logging.WARNING
+
     handler = get_log_handler()
+    handler.setLevel(target_level)
     root = logging.getLogger()
     if handler not in root.handlers:
         root.addHandler(handler)
-    # 确保 root logger 级别足够低
-    if root.level > logging.DEBUG:
+    # 仅在开发环境降低 root logger 级别，生产环境不动
+    if is_debug and root.level > logging.DEBUG:
         root.setLevel(logging.DEBUG)
