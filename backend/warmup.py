@@ -11,14 +11,12 @@ Programs 向量缓存预热脚本。
 """
 
 import logging
-import sys
 
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 
 def run():
-    # 检查必要环境变量
     import os
     missing = [k for k in ('OPENAI_API_KEY', 'REDIS_URL') if not os.environ.get(k)]
     if missing:
@@ -39,14 +37,22 @@ def run():
             programs = Program.query.all()
             logger.info(f'[warmup] 共 {len(programs)} 条 programs')
 
+            # 用 pipeline 一次批量检查所有 key 是否存在（1次网络 RTT，而非 N 次）
+            keys = [_get_program_redis_key(p.id) for p in programs]
+            pipe = r.pipeline(transaction=False)
+            for k in keys:
+                pipe.exists(k)
+            exists_flags = pipe.execute()
+
             to_encode_ids, to_encode_texts = [], []
-            for p in programs:
+            for p, exists in zip(programs, exists_flags):
+                if exists:
+                    continue
                 text = _build_program_text(p)
                 if not text.strip():
                     continue
-                if not r.exists(_get_program_redis_key(p.id)):
-                    to_encode_ids.append(p.id)
-                    to_encode_texts.append(text)
+                to_encode_ids.append(p.id)
+                to_encode_texts.append(text)
 
             if not to_encode_ids:
                 logger.info('[warmup] 向量缓存已全部就绪，跳过')
@@ -58,8 +64,11 @@ def run():
                 batch_ids = to_encode_ids[i:i + batch_size]
                 batch_texts = to_encode_texts[i:i + batch_size]
                 vectors = encode(batch_texts)
+                # pipeline 批量写入
+                pipe = r.pipeline(transaction=False)
                 for j, pid in enumerate(batch_ids):
-                    r.setex(_get_program_redis_key(pid), _ttl_with_jitter(), vectors[j].tobytes())
+                    pipe.setex(_get_program_redis_key(pid), _ttl_with_jitter(), vectors[j].tobytes())
+                pipe.execute()
                 logger.info(f'[warmup] {min(i + batch_size, len(to_encode_ids))}/{len(to_encode_ids)} 完成')
 
             logger.info('[warmup] 预热完成，启动 gunicorn')
