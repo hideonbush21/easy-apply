@@ -57,6 +57,8 @@ class UserProfile(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id', ondelete='CASCADE'), unique=True)
     name = db.Column(db.String(100))
+    gender = db.Column(db.String(10))           # male/female/other
+    birth_date = db.Column(db.String(10))       # YYYY-MM-DD
     home_institution = db.Column(db.String(200))
     institution_tier = db.Column(db.String(20))  # c9/985/211/double_non/overseas/other
     current_major = db.Column(db.String(100))
@@ -66,6 +68,7 @@ class UserProfile(db.Model):
     target_countries = db.Column(JSONB)   # ["美国", "英国"]
     target_majors = db.Column(JSONB)      # ["计算机科学"]
     degree_type = db.Column(db.String(20))  # master/phd/bachelor
+    career_plans = db.Column(JSONB)       # {short_long_term, how_prepared, how_program_helps}
     completion_rate = db.Column(Numeric(5, 2), default=0)
     recommendation_cache = db.Column(JSONB)
     recommendation_hash = db.Column(db.String(64))
@@ -93,6 +96,8 @@ class UserProfile(db.Model):
             'id': str(self.id),
             'user_id': str(self.user_id),
             'name': self.name,
+            'gender': self.gender,
+            'birth_date': self.birth_date,
             'home_institution': self.home_institution,
             'institution_tier': self.institution_tier,
             'current_major': self.current_major,
@@ -102,6 +107,7 @@ class UserProfile(db.Model):
             'target_countries': self.target_countries,
             'target_majors': self.target_majors,
             'degree_type': self.degree_type,
+            'career_plans': self.career_plans,
             'completion_rate': float(self.completion_rate) if self.completion_rate is not None else 0,
             'onboarding_goals': self.onboarding_goals,
             'onboarding_stage': self.onboarding_stage,

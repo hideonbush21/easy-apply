@@ -11,6 +11,8 @@ export interface UserProfile {
   id: string
   user_id: string
   name: string | null
+  gender: 'male' | 'female' | 'other' | null
+  birth_date: string | null
   home_institution: string | null
   institution_tier: 'c9' | '985' | '211' | 'double_non' | 'overseas' | 'other' | null
   current_major: string | null
@@ -20,6 +22,7 @@ export interface UserProfile {
   target_countries: string[] | null
   target_majors: string[] | null
   degree_type: 'master' | 'phd' | 'bachelor' | null
+  career_plans: { short_long_term?: string; how_prepared?: string; how_program_helps?: string } | null
   completion_rate: number
   updated_at?: string
 }
@@ -36,6 +39,17 @@ export interface Experience {
   description: string | null
   achievements: string[] | null
   skills: string[] | null
+  // 新增字段
+  importance: string | null
+  country: string | null
+  degree_level: string | null
+  degree_name: string | null
+  major: string | null
+  gpa_info: string | null
+  other_info: string | null
+  related_degree: string | null
+  subjective_description: string | null
+  work_type: string | null
   created_at?: string
 }
 
