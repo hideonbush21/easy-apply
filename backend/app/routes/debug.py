@@ -321,3 +321,69 @@ def clear_logs():
     from app.services.log_collector import get_log_handler
     get_log_handler().clear()
     return jsonify({'message': 'cleared'})
+
+
+# ── SOP AGENT DEBUG TRACE ──────────────────────────────────────
+
+@debug_bp.route('/sop-agent/tasks', methods=['GET'])
+@login_required
+def sop_agent_tasks():
+    """List recent SoP Agent task IDs (newest first)."""
+    denied = _require_debug_user()
+    if denied:
+        return denied
+
+    import os
+    import redis as redis_lib
+    from app.utils.redis_utils import get_redis_url
+    r = redis_lib.from_url(get_redis_url(), ssl_cert_reqs=None)
+    # Get latest 50 tasks, newest first
+    task_ids = r.zrevrange('sop:tasks', 0, 49)
+    tasks = []
+    for tid_bytes in task_ids:
+        tid = tid_bytes.decode('utf-8') if isinstance(tid_bytes, bytes) else tid_bytes
+        # Get first and last trace entry for summary
+        entries = r.lrange(f'sop:trace:{tid}', 0, 0)
+        last_entries = r.lrange(f'sop:trace:{tid}', -1, -1)
+        total = r.llen(f'sop:trace:{tid}')
+        summary = {'task_id': tid, 'event_count': total}
+        if entries:
+            import json
+            first = json.loads(entries[0])
+            summary['started_at'] = first.get('ts')
+            if first.get('node') == 'input':
+                summary['school'] = first.get('school_name', '')
+                summary['program'] = first.get('program_name', '')
+        if last_entries:
+            import json
+            last = json.loads(last_entries[0])
+            summary['ended_at'] = last.get('ts')
+            if last.get('node') == 'output':
+                summary['final_score'] = last.get('final_score')
+                summary['iterations'] = last.get('total_iterations')
+        tasks.append(summary)
+    r.close()
+    return jsonify({'tasks': tasks})
+
+
+@debug_bp.route('/sop-agent/tasks/<task_id>', methods=['GET'])
+@login_required
+def sop_agent_trace(task_id):
+    """Get full debug trace for a specific SoP Agent task."""
+    denied = _require_debug_user()
+    if denied:
+        return denied
+
+    import os
+    import json
+    import redis as redis_lib
+    from app.utils.redis_utils import get_redis_url
+    r = redis_lib.from_url(get_redis_url(), ssl_cert_reqs=None)
+    raw_entries = r.lrange(f'sop:trace:{task_id}', 0, -1)
+    r.close()
+
+    if not raw_entries:
+        return jsonify({'error': 'Task not found or trace expired'}), 404
+
+    events = [json.loads(e) for e in raw_entries]
+    return jsonify({'task_id': task_id, 'events': events})

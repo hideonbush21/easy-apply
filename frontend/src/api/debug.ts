@@ -60,3 +60,29 @@ export interface DebugLogsResponse {
   logs: DebugLogEntry[]
   total_buffered: number
 }
+
+// ── SoP Agent Debug ──
+
+export interface SopAgentTaskSummary {
+  task_id: string
+  event_count: number
+  started_at?: number
+  ended_at?: number
+  school?: string
+  program?: string
+  final_score?: number
+  iterations?: number
+}
+
+export interface SopAgentTraceEvent {
+  ts: number
+  node: string
+  type: string
+  [key: string]: unknown
+}
+
+export const getSopAgentTasks = () =>
+  api.get<{ tasks: SopAgentTaskSummary[] }>('/debug/sop-agent/tasks')
+
+export const getSopAgentTrace = (taskId: string) =>
+  api.get<{ task_id: string; events: SopAgentTraceEvent[] }>(`/debug/sop-agent/tasks/${taskId}`)

@@ -17,6 +17,7 @@ import {
   MailSearch,
   Bug,
   Terminal,
+  Bot,
 } from 'lucide-react'
 
 export default function Layout() {
@@ -201,6 +202,15 @@ export default function Layout() {
             >
               <Terminal size={16} />
               后端日志
+            </NavLink>
+          )}
+          {user?.is_admin && (
+            <NavLink to="/dashboard/sop-agent-debug" end
+              className={navLinkStyle}
+              style={navLinkInlineStyle}
+            >
+              <Bot size={16} />
+              文书 Agent 调试
             </NavLink>
           )}
         </nav>

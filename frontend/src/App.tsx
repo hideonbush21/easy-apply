@@ -19,6 +19,7 @@ import AdminDashboard from '@/pages/Admin/AdminDashboard'
 import UserManagePage from '@/pages/Admin/UserManagePage'
 import DbDebugPage from '@/pages/Debug/DbDebugPage'
 import BackendLogsPage from '@/pages/Debug/BackendLogsPage'
+import SopAgentDebugPage from '@/pages/Debug/SopAgentDebugPage'
 
 export default function App() {
   return (
@@ -68,6 +69,7 @@ export default function App() {
           />
           <Route path="db-debug" element={<ProtectedRoute requireAdmin><DbDebugPage /></ProtectedRoute>} />
           <Route path="backend-logs" element={<ProtectedRoute requireAdmin><BackendLogsPage /></ProtectedRoute>} />
+          <Route path="sop-agent-debug" element={<ProtectedRoute requireAdmin><SopAgentDebugPage /></ProtectedRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

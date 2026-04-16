@@ -68,7 +68,10 @@
       "Bash(grep -E \"\\\\.\\(md|txt|json\\)$\")",
       "Bash(npm ls:*)",
       "Bash(ls -la /Users/mac/Desktop/github/easy-apply/backend/*.sql)",
-      "Bash(ls -1 /Users/mac/Desktop/github/easy-apply/backend/migrations/*.sql)"
+      "Bash(ls -1 /Users/mac/Desktop/github/easy-apply/backend/migrations/*.sql)",
+      "Bash(grep -v \"^$\")",
+      "Bash(venv/bin/pip install:*)",
+      "Bash(venv/bin/python -c \"from app import create_app; app = create_app\\(\\); print\\('OK'\\)\")"
     ]
   }
 }
