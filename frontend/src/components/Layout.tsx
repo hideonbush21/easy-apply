@@ -36,19 +36,14 @@ export default function Layout() {
   }, [location.pathname])
 
   useEffect(() => {
-    checkDocuments()
-      .then(r => setHasDocuments(r.data.has_documents))
-      .catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    const handler = () => {
+    const refresh = () => {
       checkDocuments()
         .then(r => setHasDocuments(r.data.has_documents))
         .catch(() => {})
     }
-    window.addEventListener('documents-updated', handler)
-    return () => window.removeEventListener('documents-updated', handler)
+    refresh()
+    window.addEventListener('documents-updated', refresh)
+    return () => window.removeEventListener('documents-updated', refresh)
   }, [])
 
   const navItems = useMemo(() => {

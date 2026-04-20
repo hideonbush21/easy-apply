@@ -22,7 +22,7 @@ CRITIQUE_PROMPT = """\
 注意：
 - issues 最多列 3 条最关键的问题
 - strengths 最多 2 条
-- pass = true 当且仅当 total_score >= 7.0
+- pass = true 当且仅当 total_score >= 7.5 且所有单项分数 >= 1.0
 
 申请人背景：{user_context}
 目标学校：{school_name} {program_name}

@@ -1,10 +1,12 @@
 from datetime import datetime
 from flask import Blueprint, request, jsonify, g
+from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models.sop import SopLetter
 from app.models.recommendation import RecommendationLetter
 from app.models.application import Application
 from app.models.school import School
+from app.models.program import Program
 from app.utils.decorators import login_required
 
 documents_bp = Blueprint('documents', __name__, url_prefix='/api/documents')
@@ -49,11 +51,23 @@ def get_all_documents():
     if not all_app_ids:
         return jsonify({'documents': []})
 
-    # Fetch applications
+    # Fetch applications — eager-load program + school to avoid N+1
     applications = Application.query.filter(
         Application.id.in_(all_app_ids),
         Application.user_id == user_id,
+    ).options(
+        joinedload(Application.program).joinedload(Program.school),
     ).all()
+
+    # Pre-fetch schools for legacy apps (school_id without program)
+    legacy_school_ids = {
+        a.school_id for a in applications
+        if a.school_id and not a.program_id
+    }
+    school_map = {}
+    if legacy_school_ids:
+        schools = School.query.filter(School.id.in_(legacy_school_ids)).all()
+        school_map = {s.id: s for s in schools}
 
     app_map = {str(a.id): a for a in applications}
 
@@ -63,13 +77,13 @@ def get_all_documents():
         if not app_obj:
             continue
 
-        # Resolve school/program names
+        # Resolve school/program names (all data already loaded, zero queries)
         p = app_obj.program
         if p and p.school:
             school_name = p.school.name
             school_name_cn = p.school.name_cn
         elif app_obj.school_id:
-            school = School.query.get(app_obj.school_id)
+            school = school_map.get(app_obj.school_id)
             school_name = school.name if school else None
             school_name_cn = school.name_cn if school else None
         else:

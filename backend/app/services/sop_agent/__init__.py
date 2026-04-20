@@ -28,6 +28,8 @@ def run_sop_agent(
         'critique': {},
         'iteration': 0,
         'critique_history': [],
+        'best_draft': None,
+        'best_score': None,
         'final_sop': None,
         'score': None,
         'error': None,

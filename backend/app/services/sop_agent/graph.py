@@ -3,6 +3,7 @@ from app.services.sop_agent.state import SopAgentState
 from app.services.sop_agent.nodes import (
     draft_node,
     critique_node,
+    revise_node,
     output_node,
     should_continue,
 )
@@ -13,6 +14,7 @@ def build_sop_graph():
 
     workflow.add_node('draft', draft_node)
     workflow.add_node('critique', critique_node)
+    workflow.add_node('revise', revise_node)      # v1.1：独立节点
     workflow.add_node('output', output_node)
 
     workflow.set_entry_point('draft')
@@ -21,10 +23,11 @@ def build_sop_graph():
         'critique',
         should_continue,
         {
-            'draft': 'draft',
+            'revise': 'revise',  # v1.1：跳到 revise 而非 draft
             'output': 'output',
         },
     )
+    workflow.add_edge('revise', 'critique')  # v1.1：revise 完成后重新评审
     workflow.add_edge('output', END)
 
     return workflow.compile()

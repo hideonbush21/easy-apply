@@ -16,6 +16,8 @@ class SopAgentState(TypedDict):
     critique: dict
     iteration: int
     critique_history: list
+    best_draft: Optional[str]       # v1.2: 历史最佳稿
+    best_score: Optional[float]     # v1.2: 历史最高分
 
     # ── 输出 ─────────────────────────────────
     final_sop: Optional[str]
