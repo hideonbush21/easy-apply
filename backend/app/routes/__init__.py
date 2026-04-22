@@ -9,6 +9,7 @@ from app.routes.admin import admin_bp
 from app.routes.school_recommendation import school_rec_bp
 from app.routes.webhook import webhook_bp
 from app.routes.documents import documents_bp
+from app.routes.event import event_bp
 
 
 def register_routes(app):
@@ -23,3 +24,10 @@ def register_routes(app):
     app.register_blueprint(school_rec_bp)
     app.register_blueprint(webhook_bp)
     app.register_blueprint(documents_bp)
+    app.register_blueprint(event_bp)
+
+    # Debug blueprint 仅在 DEBUG 模式或显式启用时注册
+    import os
+    if app.config.get('DEBUG') or os.getenv('ENABLE_DEBUG_ROUTES') == '1':
+        from app.routes.debug import debug_bp
+        app.register_blueprint(debug_bp)

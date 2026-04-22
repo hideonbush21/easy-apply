@@ -39,9 +39,10 @@ def update_profile():
 
     data = request.get_json(silent=True) or {}
     allowed_fields = [
-        'name', 'home_institution', 'institution_tier', 'current_major',
+        'name', 'gender', 'birth_date',
+        'home_institution', 'institution_tier', 'current_major',
         'gpa', 'gpa_scale', 'language_scores', 'target_countries',
-        'target_majors', 'degree_type',
+        'target_majors', 'degree_type', 'career_plans',
     ]
     for field in allowed_fields:
         if field in data:

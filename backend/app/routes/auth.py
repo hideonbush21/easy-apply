@@ -207,7 +207,7 @@ def send_code():
             return jsonify({'error': f'发送太频繁，请 {ttl} 秒后再试'}), 429
     except Exception as exc:
         current_app.logger.error('Redis connection failed: %s', exc)
-        return jsonify({'error': f'服务暂时不可用，请稍后重试（Redis: {exc}）'}), 500
+        return jsonify({'error': '服务暂时不可用，请稍后重试'}), 500
 
     code = ''.join(secrets.choice(string.digits) for _ in range(6))
     try:
@@ -216,7 +216,7 @@ def send_code():
         r.setex(_cooldown_key(email), _OTP_COOLDOWN, '1')
     except Exception as exc:
         current_app.logger.error('Redis write failed: %s', exc)
-        return jsonify({'error': f'服务暂时不可用，请稍后重试（Redis write: {exc}）'}), 500
+        return jsonify({'error': '服务暂时不可用，请稍后重试'}), 500
 
     try:
         send_otp_email(email, code)
@@ -227,7 +227,7 @@ def send_code():
             r.delete(_cooldown_key(email))
         except Exception:
             pass
-        return jsonify({'error': f'邮件发送失败，请稍后重试（{exc}）'}), 500
+        return jsonify({'error': '邮件发送失败，请稍后重试'}), 500
 
     return jsonify({'message': '验证码已发送，请查收邮件'})
 
@@ -243,7 +243,11 @@ def email_login():
     if not code or len(code) != 6 or not code.isdigit():
         return jsonify({'error': '请输入6位数字验证码'}), 400
 
-    r = get_redis()
+    try:
+        r = get_redis()
+    except Exception as exc:
+        current_app.logger.error('Redis connection failed: %s', exc)
+        return jsonify({'error': '服务暂时不可用，请稍后重试'}), 500
 
     stored_code = r.get(_otp_key(email))
     if not stored_code:

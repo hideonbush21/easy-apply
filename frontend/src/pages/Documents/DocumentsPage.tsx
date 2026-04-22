@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getAllDocuments, updateDocument } from '@/api/documents'
 import type { DocumentGroup } from '@/api/documents'
-import { generateSop } from '@/api/sop'
+import { generateSop, sopStatusUrl } from '@/api/sop'
 import { generateRecommendation } from '@/api/recommendations'
 import type { RecommendationContext } from '@/api/recommendations'
 import type { Application } from '@/types'
+import { useSopGeneratingStore } from '@/store/sopGeneratingStore'
 import { Tabs } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
@@ -17,11 +18,13 @@ import {
   FileDown,
   FileText,
   Sparkles,
+  RotateCcw,
   Check,
   GraduationCap,
   X,
 } from 'lucide-react'
 import html2pdf from 'html2pdf.js'
+import DOMPurify from 'dompurify'
 import { Document, Packer, Paragraph, TextRun } from 'docx'
 import { saveAs } from 'file-saver'
 
@@ -213,21 +216,92 @@ export default function DocumentsPage() {
   const [editorContent, setEditorContent] = useState('')
   const [isDirty, setIsDirty] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [generating, setGenerating] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState('')
   const [showRLModal, setShowRLModal] = useState(false)
   const originalContentRef = useRef('')
+
+  const genStore = useSopGeneratingStore()
+  const esRef = useRef<EventSource | null>(null)
 
   // Fetch documents on mount
   useEffect(() => {
     fetchDocuments()
   }, [])
 
+  // On mount: if there's an active SoP task in store, reconnect SSE
+  useEffect(() => {
+    const { taskId, applicationId, tab } = genStore
+    if (!taskId || !applicationId) return
+
+    // Already have an EventSource open (shouldn't happen, but guard)
+    if (esRef.current) return
+
+    // Immediately select the generating app so user sees the correct view
+    setSelectedAppId(applicationId)
+    if (tab) setActiveTab(tab)
+
+    const token = (() => {
+      try {
+        const raw = localStorage.getItem('auth-storage')
+        return raw ? JSON.parse(raw)?.state?.token || '' : ''
+      } catch { return '' }
+    })()
+
+    const url = `${sopStatusUrl(taskId)}${token ? `?token=${token}` : ''}`
+    const es = new EventSource(url)
+    esRef.current = es
+
+    es.onmessage = (ev) => {
+      try {
+        const data = JSON.parse(ev.data)
+        if (data.message) genStore.setMessage(data.message)
+        if (data.stage === 'complete' || data.stage === 'error') {
+          es.close()
+          esRef.current = null
+          genStore.clear()
+          fetchDocuments()
+          if (data.stage === 'complete') {
+            window.dispatchEvent(new Event('documents-updated'))
+            showToast('文书生成成功')
+          } else {
+            showToast(data.message || '生成失败')
+          }
+          // Switch to the generating app+tab so user sees result
+          if (applicationId) setSelectedAppId(applicationId)
+          if (tab) setActiveTab(tab)
+        }
+      } catch { /* ignore */ }
+    }
+    es.onerror = () => {
+      es.close()
+      esRef.current = null
+      genStore.clear()
+      showToast('连接中断，请重试')
+    }
+
+    return () => {
+      // Don't close on unmount — task still running; store keeps state for reconnect
+      if (esRef.current) {
+        esRef.current.close()
+        esRef.current = null
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])  // Run once on mount only
+
   const fetchDocuments = async () => {
     setLoading(true)
     try {
       const res = await getAllDocuments()
-      const docs = res.data.documents
+      let docs = res.data.documents
+
+      // If there's an active generating task whose app has no letters yet,
+      // always keep a virtual entry pinned at the top so the sidebar shows it.
+      const activeEntry = genStore.virtualEntry
+      if (activeEntry && !docs.find(d => d.application_id === activeEntry.application_id)) {
+        docs = [{ ...activeEntry, sop: null, recommendation: null }, ...docs]
+      }
 
       // If navigated from ApplicationListPage with a specific app, select it.
       // If that app has no letters yet, inject a virtual entry so the sidebar shows it.
@@ -247,13 +321,17 @@ export default function DocumentsPage() {
             sop: null,
             recommendation: null,
           }
-          setDocuments([virtual, ...docs])
+          docs = [virtual, ...docs.filter(d => d.application_id !== pendingApp.id)]
+          setDocuments(docs)
           setSelectedAppId(pendingApp.id)
         }
       } else {
         setDocuments(docs)
         if (docs.length > 0 && !selectedAppId) {
-          setSelectedAppId(docs[0].application_id)
+          // Auto-select the generating app if it's in the list
+          const genAppId = genStore.applicationId
+          const preferred = genAppId && docs.find(d => d.application_id === genAppId)
+          setSelectedAppId(preferred ? genAppId! : docs[0].application_id)
         }
       }
     } catch {
@@ -266,6 +344,14 @@ export default function DocumentsPage() {
   // Current selected document group
   const selectedDoc = documents.find(d => d.application_id === selectedAppId)
   const currentLetter = selectedDoc?.[activeTab] ?? null
+
+  // Derived generating state — true only when the active task matches current view
+  const generating = !!(
+    genStore.taskId &&
+    genStore.applicationId === selectedAppId &&
+    genStore.tab === activeTab
+  )
+  const generatingMsg = generating ? genStore.message : ''
 
   // Sync editor content when selection changes
   useEffect(() => {
@@ -327,38 +413,89 @@ export default function DocumentsPage() {
 
   // Generate
   const handleGenerate = () => {
-    if (!selectedAppId) return
+    if (!selectedAppId || generating || submitting) return
     if (activeTab === 'recommendation') {
       setShowRLModal(true)  // 推荐信：先弹问答 modal
     } else {
-      doGenerate()          // SoP：直接生成
+      setSubmitting(true)
+      doGenerate().finally(() => setSubmitting(false))
     }
   }
 
+  const _subscribeSSE = useCallback((taskId: string, applicationId: string, tab: 'sop' | 'recommendation') => {
+    const token = (() => {
+      try {
+        const raw = localStorage.getItem('auth-storage')
+        return raw ? JSON.parse(raw)?.state?.token || '' : ''
+      } catch { return '' }
+    })()
+
+    return new Promise<void>((resolve, reject) => {
+      const url = `${sopStatusUrl(taskId)}${token ? `?token=${token}` : ''}`
+      const es = new EventSource(url)
+      esRef.current = es
+
+      es.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data)
+          if (data.message) genStore.setMessage(data.message)
+          if (data.stage === 'complete') {
+            es.close(); esRef.current = null
+            genStore.clear()
+            resolve()
+          } else if (data.stage === 'error') {
+            es.close(); esRef.current = null
+            genStore.clear()
+            reject(new Error(data.message || '生成失败'))
+          }
+        } catch { /* ignore */ }
+      }
+      es.onerror = () => {
+        es.close(); esRef.current = null
+        genStore.clear()
+        reject(new Error('连接中断，请重试'))
+      }
+    })
+  }, [genStore])
+
   const doGenerate = async (ctx?: RecommendationContext) => {
     if (!selectedAppId) return
-    setGenerating(true)
+    // Build a virtual entry from the currently selected doc so it can be
+    // re-injected if the user navigates away before letters are created.
+    const virtual: DocumentGroup = selectedDoc
+      ? { ...selectedDoc, sop: null, recommendation: null }
+      : {
+          application_id: selectedAppId,
+          school_name: null, school_name_cn: null,
+          program_name_cn: null, program_name_en: null,
+          sop: null, recommendation: null,
+        }
     try {
       if (activeTab === 'sop') {
-        await generateSop(selectedAppId)
+        const res = await generateSop(selectedAppId)
+        const taskId = res.data.task_id
+        genStore.setTask(taskId, selectedAppId, 'sop', virtual)
+        await _subscribeSSE(taskId, selectedAppId, 'sop')
       } else {
+        // recommendation is still synchronous
+        genStore.setTask('rec-sync', selectedAppId, 'recommendation', virtual)
         await generateRecommendation(selectedAppId, ctx)
+        genStore.clear()
       }
       await fetchDocuments()
       window.dispatchEvent(new Event('documents-updated'))
       showToast('文书生成成功')
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { error?: string } } }
-      showToast(e.response?.data?.error || '生成失败，请检查配置')
-    } finally {
-      setGenerating(false)
+      const e = err as { response?: { data?: { error?: string } }; message?: string }
+      genStore.clear()
+      showToast(e.response?.data?.error || e.message || '生成失败，请检查配置')
     }
   }
 
   // Export PDF
   const exportPdf = () => {
     const element = document.createElement('div')
-    element.innerHTML = editorContent
+    element.innerHTML = DOMPurify.sanitize(editorContent)
     element.style.padding = '40px'
     element.style.fontFamily = 'serif'
     element.style.fontSize = '12pt'
@@ -377,7 +514,7 @@ export default function DocumentsPage() {
   // Export Word
   const exportDocx = async () => {
     const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = editorContent
+    tempDiv.innerHTML = DOMPurify.sanitize(editorContent)
     const paragraphs = Array.from(tempDiv.querySelectorAll('p, h1, h2, h3, li, blockquote'))
       .map(el => new Paragraph({
         children: [new TextRun({ text: el.textContent || '', size: 24 })],
@@ -427,8 +564,8 @@ export default function DocumentsPage() {
       {/* 推荐信引导问答 Modal */}
       {showRLModal && (
         <RecommendationContextModal
-          onConfirm={(ctx) => { setShowRLModal(false); doGenerate(ctx) }}
-          onSkip={() => { setShowRLModal(false); doGenerate() }}
+          onConfirm={(ctx) => { setShowRLModal(false); setSubmitting(true); doGenerate(ctx).finally(() => setSubmitting(false)) }}
+          onSkip={() => { setShowRLModal(false); setSubmitting(true); doGenerate().finally(() => setSubmitting(false)) }}
           onClose={() => setShowRLModal(false)}
         />
       )}
@@ -583,10 +720,20 @@ export default function DocumentsPage() {
                     导出 Word
                   </Button>
                   <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleGenerate}
+                    disabled={generating || submitting}
+                    loading={generating || submitting}
+                  >
+                    <RotateCcw size={14} />
+                    {(generating || submitting) ? (generatingMsg || '生成中…') : '重新生成'}
+                  </Button>
+                  <Button
                     variant="primary"
                     size="sm"
                     onClick={handleSave}
-                    disabled={!isDirty}
+                    disabled={!isDirty || generating || submitting}
                     loading={saving}
                   >
                     <Save size={14} />
@@ -615,10 +762,11 @@ export default function DocumentsPage() {
               <Button
                 variant="primary"
                 onClick={handleGenerate}
-                loading={generating}
+                disabled={generating || submitting}
+                loading={generating || submitting}
               >
                 <Sparkles size={16} />
-                {generating ? 'AI 生成中...' : `生成${activeTab === 'sop' ? '申请信' : '推荐信'}`}
+                {(generating || submitting) ? (generatingMsg || 'AI 生成中...') : `生成${activeTab === 'sop' ? '申请信' : '推荐信'}`}
               </Button>
             </div>
           )}

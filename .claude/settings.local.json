@@ -57,8 +57,21 @@
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?|sql|json\\)$\")",
       "Bash(npx vite:*)",
-      "Bash(git stash:*)",
-      "Bash(git cherry-pick:*)"
+      "Bash(brew --version)",
+      "Bash(find /Users/mac/Desktop/github/easy-apply/backend -name migrations -o -name *migration*)",
+      "Bash(find /Users/mac/Desktop/github/easy-apply/frontend/src -name *store* -o -name *context* -o -name *provider*)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(xargs ls:*)",
+      "Bash(find /Users/mac/Desktop/github/easy-apply/frontend/src -type f -name *.tsx -o -name *.ts)",
+      "Bash(ls backend/migrations/010* backend/app/models/event.py backend/app/routes/event.py backend/app/services/event_agent/)",
+      "Bash(grep -E \"\\\\.py$|^d\")",
+      "Bash(grep -E \"\\\\.\\(md|txt|json\\)$\")",
+      "Bash(npm ls:*)",
+      "Bash(ls -la /Users/mac/Desktop/github/easy-apply/backend/*.sql)",
+      "Bash(ls -1 /Users/mac/Desktop/github/easy-apply/backend/migrations/*.sql)",
+      "Bash(grep -v \"^$\")",
+      "Bash(venv/bin/pip install:*)",
+      "Bash(venv/bin/python -c \"from app import create_app; app = create_app\\(\\); print\\('OK'\\)\")"
     ]
   }
 }

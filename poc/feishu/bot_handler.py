@@ -71,15 +71,18 @@ def _clean_mention_text(content_json: str, mentions: list | None) -> str:
 # LLM 调用
 # ---------------------------------------------------------------------------
 def _call_llm(user_text: str) -> str:
-    """调用 OpenAI Chat API 生成回复"""
+    """调用 Kimi (Moonshot) Chat API 生成回复"""
     system_prompt = os.environ.get(
         "BOT_SYSTEM_PROMPT",
         "你是一个留学申请助手，帮助用户解答留学相关问题。请用简洁友好的语气回答。",
     )
     try:
-        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        client = OpenAI(
+            api_key=os.environ["KIMI_API_KEY"],
+            base_url="https://api.moonshot.cn/v1",
+        )
         resp = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="moonshot-v1-8k",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_text},

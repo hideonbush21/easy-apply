@@ -9,7 +9,7 @@ def login_required(f):
     def decorated(*args, **kwargs):
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
         if not token:
-            return jsonify({'error': 'Unauthorized'}), 401
+            token = request.args.get('token', '')
         try:
             payload = jwt.decode(token, current_app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
             user = User.query.get(payload['user_id'])

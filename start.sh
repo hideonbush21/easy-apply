@@ -1,8 +1,9 @@
 #!/bin/bash
 # Easy Apply - 一键启动脚本
-# 同时启动 Backend (Flask:5001) + Frontend (Vite:5173)
+# 同时启动 Backend (Flask:5001) + Celery Worker + Frontend (Vite:5173)
 # 使用: ./start.sh          启动全部
 #       ./start.sh backend   仅启动后端
+#       ./start.sh celery    仅启动 Celery worker
 #       ./start.sh frontend  仅启动前端
 #       ./start.sh migrate   手动执行数据库迁移（需要 DB 可达）
 
@@ -56,6 +57,14 @@ start_backend() {
   echo -e "${GREEN}[Backend]${NC} Flask 已启动 -> http://localhost:5001"
 }
 
+start_celery() {
+  echo -e "${GREEN}[Celery]${NC} 启动 Celery worker..."
+  prepare_backend
+  cd "$BACKEND_DIR"
+  "$BACKEND_DIR/venv/bin/celery" -A app.celery_app worker --loglevel=info --concurrency=2 &
+  echo -e "${GREEN}[Celery]${NC} Celery worker 已启动"
+}
+
 start_frontend() {
   echo -e "${GREEN}[Frontend]${NC} 启动 Vite 开发服务 (port 5173)..."
   cd "$FRONTEND_DIR"
@@ -83,17 +92,19 @@ echo "========================================="
 
 case "${1:-all}" in
   backend)  start_backend; echo ""; echo -e "${GREEN}全部就绪! 按 Ctrl+C 停止${NC}"; wait ;;
+  celery)   start_celery; echo ""; echo -e "${GREEN}全部就绪! 按 Ctrl+C 停止${NC}"; wait ;;
   frontend) start_frontend; echo ""; echo -e "${GREEN}全部就绪! 按 Ctrl+C 停止${NC}"; wait ;;
   migrate)  trap - EXIT INT TERM; run_migrate ;;
   all)
     start_backend
+    start_celery
     start_frontend
     echo ""
     echo -e "${GREEN}全部就绪! 按 Ctrl+C 停止所有服务${NC}"
     wait
     ;;
   *)
-    echo "用法: $0 [backend|frontend|all|migrate]"
+    echo "用法: $0 [backend|celery|frontend|all|migrate]"
     exit 1
     ;;
 esac

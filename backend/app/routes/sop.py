@@ -1,11 +1,17 @@
-from flask import Blueprint, request, jsonify, g
+import json
+
+import redis as redis_lib
+from flask import Blueprint, Response, request, jsonify, g
+
 from app.extensions import db
 from app.models.sop import SopLetter
 from app.models.application import Application
 from app.models.experience import Experience
 from app.models.school import School
-from app.services.ai_service import generate_sop, humanize_text
+from app.services.ai_service import humanize_text
+from app.tasks.sop_task import generate_sop_task
 from app.utils.decorators import login_required
+from app.utils.redis_utils import get_redis_url
 
 sop_bp = Blueprint('sop', __name__, url_prefix='/api/sop')
 sop_bp.strict_slashes = False
@@ -33,28 +39,66 @@ def generate():
     experiences = Experience.query.filter_by(user_id=g.user.id).all()
     experiences_list = [e.to_dict() for e in experiences]
 
-    try:
-        content = generate_sop(
-            user_profile=profile_dict,
-            experiences=experiences_list,
-            school_name=school.name_cn or school.name,
-            major=app_obj.major or '',
-            school_description=school.description or '',
-            degree_type=profile_dict.get('degree_type') or '',
-        )
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        return jsonify({'error': f'AI service error: {str(e)}'}), 502
+    state_input = {
+        'user_profile': profile_dict,
+        'experiences': experiences_list,
+        'school_name': school.name_cn or school.name,
+        'program_name': app_obj.major or '',
+        'school_description': school.description or '',
+        'degree_type': profile_dict.get('degree_type') or '',
+    }
 
-    letter = SopLetter(
-        user_id=g.user.id,
-        application_id=application_id,
-        content=content,
+    task = generate_sop_task.delay(
+        state_input,
+        application_id=str(application_id),
+        user_id=str(g.user.id),
     )
-    db.session.add(letter)
-    db.session.commit()
-    return jsonify(letter.to_dict()), 201
+    return jsonify({'task_id': task.id}), 202
+
+
+@sop_bp.route('/generate/status/<task_id>')
+@login_required
+def generate_status(task_id):
+    def event_stream():
+        redis_url = get_redis_url()
+
+        # Check Redis cache first — handles late SSE connections (task already done)
+        try:
+            rc = redis_lib.from_url(redis_url, ssl_cert_reqs=None)
+            cached = rc.get(f'sop:result:{task_id}')
+            rc.close()
+            if cached:
+                yield f'data: {cached.decode("utf-8")}\n\n'
+                return
+        except Exception:
+            pass
+
+        # Subscribe and stream progress
+        r = redis_lib.from_url(redis_url, ssl_cert_reqs=None)
+        ps = r.pubsub()
+        channel = f'sop:progress:{task_id}'
+        ps.subscribe(channel)
+        try:
+            for message in ps.listen():
+                if message['type'] == 'message':
+                    data = message['data'].decode('utf-8')
+                    yield f'data: {data}\n\n'
+                    parsed = json.loads(data)
+                    if parsed.get('stage') in ('complete', 'error'):
+                        break
+        finally:
+            ps.unsubscribe(channel)
+            r.close()
+
+    return Response(
+        event_stream(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+            'Connection': 'keep-alive',
+        },
+    )
 
 
 @sop_bp.route('/<application_id>', methods=['GET'])

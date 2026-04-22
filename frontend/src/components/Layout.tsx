@@ -15,6 +15,9 @@ import {
   ChevronDown,
   ScanSearch,
   MailSearch,
+  Bug,
+  Terminal,
+  Bot,
 } from 'lucide-react'
 
 export default function Layout() {
@@ -33,19 +36,14 @@ export default function Layout() {
   }, [location.pathname])
 
   useEffect(() => {
-    checkDocuments()
-      .then(r => setHasDocuments(r.data.has_documents))
-      .catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    const handler = () => {
+    const refresh = () => {
       checkDocuments()
         .then(r => setHasDocuments(r.data.has_documents))
         .catch(() => {})
     }
-    window.addEventListener('documents-updated', handler)
-    return () => window.removeEventListener('documents-updated', handler)
+    refresh()
+    window.addEventListener('documents-updated', refresh)
+    return () => window.removeEventListener('documents-updated', refresh)
   }, [])
 
   const navItems = useMemo(() => {
@@ -181,6 +179,35 @@ export default function Layout() {
               </span>
             </div>
           </div>
+
+          {/* DB Debug — 仅管理员可见 */}
+          {user?.is_admin && (
+            <NavLink to="/dashboard/db-debug" end
+              className={navLinkStyle}
+              style={navLinkInlineStyle}
+            >
+              <Bug size={16} />
+              数据库调试
+            </NavLink>
+          )}
+          {user?.is_admin && (
+            <NavLink to="/dashboard/backend-logs" end
+              className={navLinkStyle}
+              style={navLinkInlineStyle}
+            >
+              <Terminal size={16} />
+              后端日志
+            </NavLink>
+          )}
+          {user?.is_admin && (
+            <NavLink to="/dashboard/sop-agent-debug" end
+              className={navLinkStyle}
+              style={navLinkInlineStyle}
+            >
+              <Bot size={16} />
+              文书 Agent 调试
+            </NavLink>
+          )}
         </nav>
 
         {/* User */}

@@ -5,7 +5,7 @@ import { getProfile } from '@/api/profile'
 import { getDeadlines, getApplications } from '@/api/applications'
 import type { UserProfile, Application } from '@/types'
 import { ChevronRight, Clock, Sparkles, FileText, User, BookOpen, School } from 'lucide-react'
-import ApplicationCalendar from '@/components/ApplicationCalendar'
+import EventCalendar from '@/components/EventCalendar'
 
 export default function Dashboard() {
   const { user } = useAuthStore()
@@ -99,9 +99,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Application Calendar */}
+      {/* Event Calendar */}
       <div style={{ marginBottom: 28 }}>
-        <ApplicationCalendar applications={allApplications} />
+        <EventCalendar applications={allApplications} />
       </div>
 
       {/* Quick links */}

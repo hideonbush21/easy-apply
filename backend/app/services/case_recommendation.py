@@ -260,6 +260,14 @@ def get_case_based_recommendations(
     for item in similar_programs:
         programs_by_school[item["school_id"]].append(item)
 
+    # 批量预取所有涉及的 Program，消除循环内 N+1 查询
+    all_program_ids = [item["program_id"] for item in similar_programs]
+    if all_program_ids:
+        program_objs = Program.query.filter(Program.id.in_(all_program_ids)).all()
+        program_map = {str(p.id): p for p in program_objs}
+    else:
+        program_map = {}
+
     # 组装结果
     results = []
     for entry in top_school_list:
@@ -275,7 +283,7 @@ def get_case_based_recommendations(
                 ranking=s.ranking if s else None,
             )
             for item in programs_by_school[school_id_str]:
-                p = Program.query.get(item["program_id"])
+                p = program_map.get(item["program_id"])
                 if p:
                     program_list.append({
                         "id": str(p.id),
