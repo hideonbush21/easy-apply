@@ -8,11 +8,8 @@ from app.utils.decorators import login_required
 debug_bp = Blueprint('debug', __name__, url_prefix='/api/debug')
 debug_bp.strict_slashes = False
 
-DEBUG_NICKNAME = 'aaaaaa'
-
-
 def _require_debug_user():
-    if g.user.nickname != DEBUG_NICKNAME:
+    if not g.user.is_admin:
         return jsonify({'error': 'Forbidden'}), 403
     return None
 
