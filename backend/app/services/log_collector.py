@@ -91,13 +91,14 @@ def install_log_handler(app_logger: logging.Logger | None = None):
     """将 handler 挂载到 root logger，确保所有日志都被捕获。"""
     import os
     is_debug = os.getenv('FLASK_ENV') == 'development' or os.getenv('FLASK_DEBUG') == '1'
-    target_level = logging.DEBUG if is_debug else logging.WARNING
+    # 生产环境也收集 INFO 级别，让 debug 面板能看到实际运行日志
+    target_level = logging.DEBUG if is_debug else logging.INFO
 
     handler = get_log_handler()
     handler.setLevel(target_level)
     root = logging.getLogger()
     if handler not in root.handlers:
         root.addHandler(handler)
-    # 仅在开发环境降低 root logger 级别，生产环境不动
-    if is_debug and root.level > logging.DEBUG:
-        root.setLevel(logging.DEBUG)
+    # 确保 root logger 级别不高于 handler 级别，否则日志会被过滤掉
+    if root.level == logging.NOTSET or root.level > target_level:
+        root.setLevel(target_level)
