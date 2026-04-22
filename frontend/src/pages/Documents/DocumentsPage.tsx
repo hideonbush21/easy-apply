@@ -211,6 +211,7 @@ export default function DocumentsPage() {
 
   const [documents, setDocuments] = useState<DocumentGroup[]>([])
   const [loading, setLoading] = useState(true)
+  const [initialLoaded, setInitialLoaded] = useState(false)
   const [selectedAppId, setSelectedAppId] = useState('')
   const [activeTab, setActiveTab] = useState<'sop' | 'recommendation'>('sop')
   const [editorContent, setEditorContent] = useState('')
@@ -338,6 +339,7 @@ export default function DocumentsPage() {
       // handle error silently
     } finally {
       setLoading(false)
+      setInitialLoaded(true)
     }
   }
 
@@ -533,8 +535,8 @@ export default function DocumentsPage() {
     saveAs(blob, `${activeTab === 'sop' ? 'SoP' : '推荐信'}_${schoolName}_${new Date().toLocaleDateString('zh-CN')}.docx`)
   }
 
-  // Loading state
-  if (loading) {
+  // 全屏 loading 仅在首次加载时显示，返回页面时不阻塞界面
+  if (loading && !initialLoaded) {
     return (
       <div className="flex items-center justify-center py-20 gap-2" style={{ color: '#9ca3af' }}>
         <Spinner /> <span className="text-sm">加载中...</span>
