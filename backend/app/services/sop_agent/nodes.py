@@ -105,7 +105,7 @@ def _call_openai(prompt: str, temperature: float = 0.1) -> str:
             'messages': [{'role': 'user', 'content': prompt}],
             'temperature': temperature,
         },
-        timeout=90,
+        timeout=30,
     )
     response.raise_for_status()
     return response.json()['choices'][0]['message']['content']
@@ -114,11 +114,14 @@ def _call_openai(prompt: str, temperature: float = 0.1) -> str:
 # ── Critique caller (GPT-4 优先，Kimi 降级) ──────────────────────────────────
 
 def _call_critique(prompt: str) -> str:
-    """评审调用：有 OPENAI_API_KEY 则用 GPT-4，否则降级到 Kimi。"""
+    """评审调用：有 OPENAI_API_KEY 则用 GPT-4，超时/失败自动降级到 Kimi 128k。"""
     if os.getenv('OPENAI_API_KEY', ''):
-        logger.info('[sop_agent] critique using OpenAI GPT-4')
-        return _call_openai(prompt, temperature=0.1)
-    logger.info('[sop_agent] critique using Kimi 128k (OPENAI_API_KEY not set)')
+        try:
+            logger.info('[sop_agent] critique using OpenAI GPT-4')
+            return _call_openai(prompt, temperature=0.1)
+        except Exception as e:
+            logger.warning(f'[sop_agent] OpenAI critique failed ({e}), falling back to Kimi 128k')
+    logger.info('[sop_agent] critique using Kimi 128k')
     return _call_kimi(prompt, temperature=0.1, model='moonshot-v1-128k')
 
 
