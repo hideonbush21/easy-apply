@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "sh -c 'celery -A app.celery_app.celery worker --loglevel=info --concurrency=2 & gunicorn run:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120'",
+    "startCommand": "sh -c 'celery -A app.celery_app.celery worker --loglevel=info --concurrency=2 & gunicorn run:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120'",
     "restartPolicyType": "ON_FAILURE"
   }
 }
